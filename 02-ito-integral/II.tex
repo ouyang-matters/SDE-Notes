@@ -1,0 +1,765 @@
+\documentclass{article}
+\usepackage{CJKutf8}
+\usepackage{graphicx}
+\usepackage{math_blog}
+\usepackage{amsmath}
+\usepackage{appendix}
+\usepackage[normalem]{ulem}
+\usepackage[thicklines]{cancel}
+\title{[SDE II] 伊藤积分与数值方法入门}
+\author{Anqiao Ouyang, Xuecheng Liu}
+\date{August 29, 2025}
+
+\newcommand{\Title}{[SDE II] 伊藤积分与数值方法入门}
+\newcommand{\Column}{Stochastic Differential Equations I}
+\newcommand{\Author}{Anqiao Ouyang, Xuecheng Liu}
+
+\begin{document}
+\begin{CJK*}{UTF8}{gbsn}
+
+\maketitle
+
+\section{从ODE方程到SDE}
+\subsection{确定性系统}
+
+在经典的微分方程理论中，我们常常考虑如下形式的确定性动力系统
+\[
+  \frac{\mathrm{d}X_t}{\mathrm{d}t} = f(X_t,t), \qquad X(0)=x_0
+\]
+这里 $X_t$ 描述随时间演化的状态，$f$ 是系统的漂移项（drift），决定了系统的确定性轨道。
+在这种设定下，给定初值 $x_0$，解 $X_t$ 完全由 $f$ 唯一确定。
+
+然而，许多实际问题中，系统会受到噪声、环境扰动或不可控因素的影响，单纯的 ODE 难以刻画这些不确定性。
+
+\subsection{从确定性到随机动力学}
+
+在经典的常微分方程（ODE）框架下，系统的演化由确定性的漂移项完全主导。例如
+\[
+  \mathrm{d}X_t = f(X_t,t)\,\mathrm{d}t, \qquad X(0)=x_0,
+\]
+其解 $X_t$ 在给定初值后是唯一确定的函数。这样的模型适合描述理想化的、无噪声的系统。
+
+然而在实际问题中，系统常常受到外界不可控因素或微观不确定性的影响，而单纯的 ODE 无法捕捉到“不可预测的波动”。因此，需要在确定性动力学的基础上引入随机扰动。
+
+\medskip
+一种自然的做法是，在 ODE 的漂移项外，再加入一个噪声驱动项。例如
+\[
+  \mathrm{d}X_t = f(X_t,t)\,\mathrm{d}t + \sigma\,\mathrm{d}B_t,
+\]
+其中 $B_t$ 是标准布朗运动（即一个均值为零、方差为 $t$ 的连续鞅过程），$\sigma>0$ 表示噪声强度。这里的附加项 $\sigma\,\mathrm{d}B_t$ 描述了在平均趋势 $f$ 的基础上，系统轨迹不断受到细小但持久的随机扰动。直观上，漂移项决定了“整体趋势”，而布朗噪声决定了“局部波动”。
+
+更一般地，噪声项的强度本身也可能依赖于当前的系统状态与时间。例如，当系统接近某些临界值时，噪声可能被放大或抑制。这时可写作
+\[
+  \mathrm{d}X_t = f(X_t,t)\,\mathrm{d}t + g(X_t,t)\,\mathrm{d}B_t,
+\]
+其中 $g(X_t,t)$ 被称为 \textbf{扩散系数}（diffusion coefficient），它调节随机扰动的幅度。由此我们得到最常见的 \textbf{随机微分方程}（Stochastic Differential Equation, SDE）。
+
+\medskip
+从数学角度看，SDE 与 ODE 的关键差别在于， ODE 的解 $X_t$ 是确定函数，而 SDE 的解是定义在概率空间上的随机过程。此处 $f(X_t,t)$ 仍然是“漂移项”，决定了系统的平均走向，而 $g(X_t,t)\,\mathrm{d}B_t$ 是“扩散项”，它通过布朗运动引入了非平滑、不确定的路径结构。由于布朗运动路径几乎处处不可微，$g(X_t,t)\,\mathrm{d}B_t$ 必须在伊藤积分或斯特拉托诺维奇积分的框架下加以解释。
+
+SDE 不仅在形式上扩展了 ODE，还在本质上使得解成为了概率意义下的一族轨道。这种转变需要引入随机积分理论（伊藤积分、伊藤引理等）才能严谨地定义和分析。
+
+\section{伊藤积分与伊藤引理}
+\subsection{布朗运动不可微与积分问题}
+可以通过证明以下概率来证明布朗运动连续路径不可微：先考虑右导数
+$$
+P(\{\lim_{t\to0^+} \frac{B_{t+h}-B_t}{h}\space\text{exists}\})=0
+$$
+然而，要直接描述$\{\lim_{t\to0^+} \frac{B_{t+h}-B_t}{h}\space\text{exists}\}$这样的事件非常困难。概率论中的一个常用技巧是，欲证明$P(A)=0$，如果事件$A$不好处理，那将它放宽到一个稍微广些的事件$B\supset A$。然后去证明$P(B)=0$。而分析学里，极限不好处理，就先看看有界性。有界总比有极限好搞。{先考虑其在$t=0$处，没有右导数}。
+
+{如果函数$f(t)$在$0$处可微，那么有}
+$$
+{\exists n,k\in N_+,\forall t\in[0,1/k),\text{s.t.}|B_t|\le nt
+}$$
+{固定$n,k$，记事件$A(n,k)=\{\forall t\in[0,1/k),\text{s.t.}|B_t|\le nt\}$
+那么必有}
+$$
+{\{\lim_{h\to0^+} \frac{B_{t+h}-B_t}{h}\space\text{exists}\}\subset
+\bigcup_{n=1}^\infty\bigcup_{k=1}^\infty A(n,k)}
+$$
+{但是$A(n,k)$未必可测。那么就得再找更大的零测集包住它（不完备的？）。}再放宽条件，但也是有技巧的：{$A(n,k)$要求对任何$t<1/k$。}我们就尝试弱化这点，将它放宽到可列甚至有限。
+ 一是可以利用有理数的可列性，放松到$t\in Q\cap[0,1/k)$。于是有
+    $${A(n,k)\subset C(n,k)=\{\forall t\in[0,1/k)\cap Q,\text{s.t.}|B_t|\le nt\}=\bigcap_{p\in Q\cap[0,1/k)}\{|B_p|\le np\} }$$
+    {易计算发现$P(|B_p|\le np)\le\sqrt{(1-e^{-n^2p})/2\pi}$，因此$P(C(n,k))=0$}
+
+由于布朗运动的特性，可知其在$[0,1)$上的任何点处都没有右导数。可是，这不能说明$[0,1)$上几乎处处不可微。本质上是因为
+$$
+\forall t\in[0,1],P(A_t)=0\not\Rightarrow P(\bigcup_{t\in[0,1]}A_t)=0.
+$$
+只有当指标集可列时才能得到。一个简单的例子：$X$是连续型随机变量，$P(X=x)=0$必然对所有$x\in\mathbb{R}$成立；但$P(X\in\mathbb{R})=1$。
+
+因此我们还是得关注整个$[0,1)$上的情况。重新令$A(n,k)={\{\exists t\in[0,1),\forall h\in[0,1/k),\text{s.t.}|B_{t+h}-B_t|\le nh\}}$。同样的，我们要放宽限制，找一个$B(n,k)\supset A(n,k)$。问题之所以棘手，是因为测度对连续统参数（如这里的$t\in[0,1)$）没什么好的性质。继续考虑可数化这个参数：
+\begin{itemize}
+    \item 考虑将$[0,1)$进行划分，那么对任意的$t\in[0,1)$，$t$会在某个$[t_j,t_{j+1})$中。如果划分够细，只要$\omega\in A(n,k)$，就一定会有
+    $$|B_{t_{j+2}}(\omega)-B_{t_{j+1}}(\omega)|\le|B_{t_{j+1}}(\omega)-B_t(\omega)|+|B_{t_{j+2}(\omega)}-B_t(\omega)|\le n(t_{j+1}+t_{j+2}-2t_j) $$
+    如果是等划分，等间隔为$\Delta$。那就有
+    $$|B_{t_{j+2}}(\omega)-B_{t_{j+1}}(\omega)|\le 3n\Delta $$
+    \item 假设将$[0,1)$划分成$m$等分。由上述可知，只需$1/m$小于$1/2k$即可。取
+    $$C(m,n,k)=\cup_{j=0}^{m-1}\{|B_{t_{j+1}}-B_{t_{j}}|\le 3n/m\}$$
+    \item 但$C(m,n,k)$还不足以是零测集。但对所有的$m\ge3k$，有$A(n,k)\subset C(m,n,k)$。把所有的$C(m,n,k)$取交集就很可能是零测集。令$B(n,k)=\cap_{m\ge3k}C(m,n,k)$。不难证明这是零测集。
+    \item 综上，$$A(n,k)\subset C(m,n,k)\Rightarrow A(n,k)\subset B(n,k)\Rightarrow \cup_n\cup_kA(n,k)\subset \cup_n\cup_kB(n,k)$$
+    且$P(B(n,k))=0,\forall n,k$。所以$B_t$的轨道a.s.不可微。
+\end{itemize}
+
+
+\subsection{伊藤积分的定义}
+\subsubsection{可料简单过程的伊藤积分}
+定义可料简单过程：
+\begin{definition}
+如果随机过程$H=\{H_t\}$满足
+    在区间$[0,T]$上存在一列划分
+    $$0=t_0<t_1<\cdots<t_N=T$$使得$H$在$t_n< t\le t_{n+1}$时是常过程。即存在一列随机过程$\{\bar{H}\}_{n=1}^N$，满足
+    $$
+    H_t=\sum_{n=0}^{N-1}H_n\,\mathbf{1}_{(t_n,t_{n+1}]}(t)+H_0\,\mathbf{1}_{\{0\}}(t))
+    $$
+    其中$H_n$满足$E(|H_n|^2)<\infty$，以及当$t\in(t_n,t_{n+1}]$时，$H_t$关于$\mathcal{F}_{t_n}$可测，$H_0$关于$\mathcal{F}_0$可测。
+\end{definition}
+形象的说，这样的过程的轨迹是阶梯函数。可料体现在右极左连。于是可以先定义简单过程的伊藤积分
+\begin{definition}[简单过程的伊藤过程]
+设$H$为适应的简单过程。
+    $$I_T(H)=\sum_{n=1}^N H_n\Delta B_{t_n}
+    $$
+    则称$I_T(H)$是关于$H$的伊藤积分。记作
+    $$
+    \int_0^TH_t\mathrm{d}B_t
+    $$
+\end{definition}
+伊藤积分的建立过程类似于Lesbegue积分。先定义一类简单对象的积分，再推向更广的函数类。所以接下来的工作是介绍$I_t(H)$的几点性质
+线性性、
+区间可加性、
+适应性、
+鞅性。
+
+更重要的是下面的两条性质
+\begin{enumerate}
+    \item 0均值 $$E\left(\int_0^TH_t\mathrm{d}B_t\right)=0 $$
+    \item 等距性 \label{pro2}
+    $$\mathbb{E}\!\left[\left(\int_0^T H_t\,\mathrm{d}B_t\right)^2\right]
+=\mathbb{E}\!\int_0^T |H_t|^2\,\mathrm{d}t $$
+\end{enumerate}
+证明较为简单，只要掌握怎么求正态分布的期望方差，以及对独立性的把握即可，不赘述。
+\subsubsection{$L^2_T$上的伊藤积分}
+为了将伊藤积分推广到更广的空间里，我们需要定义一个合适的空间$L^2_T(\Omega)$
+$$\begin{aligned}
+L^2_T(\Omega)
+=\Big
+\{&X=\{X_t\}_{0\le t\le T}:X(t,\omega)\space\text{measurable about}\space\mathcal{B}(0,T)\otimes\mathcal{F}\\
+&\land X_t\space\text{measurable about}\space\mathcal{F}_t \\
+&\land E(\int_0^T|X_t|^2\mathrm{d}t)<\infty\Big\}
+\end{aligned}
+$$
+看到其他地方要求$X$还必须是\textbf{循序可测}的。定义其上的范数为$\|X\|_{L_T^2}=\sqrt{E(\int_0^T|X_t|^2\mathrm{d}t)}$。
+其实类似乘积空间上的$L^2([0,T]\times\Omega)$。不出乎意料，简单过程都是在$L^2_T(\Omega)$里的。可以证明，$L^2_T(\Omega)$是\textbf{Banach}的。还可以定义其内积
+$$
+\langle X,Y\rangle = \mathbb{E}\!\int_0^T X_tY_t\,\mathrm{d}t
+$$
+那么$L_T^2$就是\textbf{Hilbert}空间。按照分析一般的尿性，简单过程多半在$L^2_T(\Omega)$里是稠密的
+\begin{theorem}
+$X$是$L^2_T(\Omega)$中的随机过程。$\forall\epsilon>0$，$\exists H\space\text{simple}$使得
+    $$
+    \|X-H\|_{L_T^2}<\epsilon
+    $$
+\end{theorem}
+证明的思路分三步：
+\begin{enumerate}
+    \item 先假设$X(t,\omega)$关于$t$l连续且有界。利用控制收敛定理和连续性，证明是容易的。
+    \item 假设$X(t,\omega)$有界但不一定连续\label{2}。为了利用连续情形的结论，可以利用\textbf{卷积}将其连续化。选取一族适当的核函数$K_\lambda(t)$，令
+    $$(X*K_\lambda)(t)=\int_0^tK_\lambda(t-s)X(s)\mathrm{d}s$$
+    \item $X\in L_T^2$，对$X$做截断得到$X^{(n)}$，利用\ref{2}的结果得到$X^{(n)}$都满足条件，再逼近$X$。
+\end{enumerate}
+标准的分析学做法，其本质就是寻找稠密子集。
+
+又因为根据性质\ref{pro2}，可知$I_t(H)$是$\{H\space\text{simple}:H\in L_T^2\}$到$L^2(\Omega)$的线性等距映射，同时也是一个有界线性算子。如果$H^{(n)}$是$L_T^2$里的柯西列，那么$I_t(H^{(n)})$同样是$L^2(\Omega)$上的柯西列。于是我们就可以定义$L^2_T(\Omega)$上的伊藤积分
+\begin{definition}
+    $X\in L^2_T(\Omega)$，那么存在一列简单过程$H^{(n)}$使得在$L^2_T$范数下，$H^{(n)}\to X$。定义$X$的伊藤积分如下
+    $$\int_0^TX_s\mathrm{d}B_s=\lim_n\int_0^TH_t^{(n)}\mathrm{d}B_s$$
+    该极限在$L^2$的意义下收敛。
+\end{definition}
+同样的。推广后的伊藤积分同样满足线性性、区间可加性、适应性以及鞅性。
+
+以及相应的均值、方差公式
+\begin{enumerate}
+    \item 0均值$$E\left(\int_0^TX_t\mathrm{d}B_t\right)=0 $$
+    \item 等距映射$$E\left(\int_0^TX_t\mathrm{d}B_t\right)^2=\int_0^TE|X_t|^2\mathrm{d}t$$
+    \item 协方差公式
+    $$E\left(\int_0^TX_t\mathrm{d}B_t\int_0^TY_t\mathrm{d}B_t\right)=\int_0^TE(X_tY_t)\mathrm{d}t$$
+\end{enumerate}
+证明这三个等式只需利用简单过程逼近的连续性即可。
+
+\subsubsection{二阶变差}
+由于布朗运动路径函数是处处连续但处处不可微，其在$[0,T]$不是有界变差过程。但它的二阶变差有限。
+\begin{lemma}[布朗运动的二阶变差]
+    $$[B,B]_t=t$$
+\end{lemma}
+该证明简单，无需多言。受此启发，我们可以定义任意两个过程在$[0,T]$上的二阶协变差。规定$t_0=0,t_N=T,\Delta=\max_n\{\Delta t_n\}$.
+\begin{definition}
+    有过程$X,Y$，如果以下极限依概率收敛
+    $$
+    \lim_{\Delta\to0}\sum_{n=0}^{N-1}(Y_{t_{n+1}}-Y_{t_{n}})(X_{t_{n+1}}-X_{t_{n}})
+    $$
+    则称其极限过程为关于$X,Y$的二阶协变差。简记为$[X,Y]_T$
+\end{definition}
+这里取$X,Y$为布朗运动$B$和非随机函数$t$，那么有
+$$
+\lim_{\Delta\to0}\sum_{n=1}^{N-1}(B_{t_{n+1}}-B_{t_{n}})({t_{n+1}}-{t_{n}})=0
+$$
+极限在$L^2$范数下收敛，那自然是依概率的。实际上，其方差的极限和$\lim\sum_n(t_{n+1}-t_{n})^{3/2}$同阶，其阶数为$1/2$。我们还关心伊藤积分的二次变差。$[0,t],t\le T$上的伊藤积分$I_t=\{\int_0^tX_s\mathrm{d}B_s\}_{0\le t\le T}$可以视为随机过程。先看简单过程，其二阶变差为
+$$
+[I,I]_T=\lim\sum_{n=0}^{N-1}(\int_{t_n}^{t_{n+1}}X_s\mathrm{d}B_s)^2=\lim\sum_{n=0}^{N-1}X_n^2(B_{n+1}-B_n)^2
+=\int_0^T|X_s|^2\mathrm{d}s
+$$
+用简单过程逼近一般过程，就能得到同样的表达式。当然，收敛依然是依概率的。
+
+
+\subsection{伊藤引理及例子}
+\subsubsection{布朗运动的伊藤公式}
+假设$s$二阶连续可微，$f(B_T)-f(B_0)$可以\textbf{Taylor}展开。但是为了处理得更精细，需要将$[0,T]$做个划分。
+$$
+\begin{aligned}
+    f(B_T)-f(B_0)
+    &=\sum_{n=1}^N(f(B_{t_n})-f(B_{t_{n-1}}))
+\end{aligned}
+$$
+单独取出求和中的一项，做\textbf{Taylor}展开，并记$\Delta B_{{n-1}}=B_{t_n}-B_{t_{n-1}}$。
+$$
+f(B_{t_n})-f(B_{t_{n-1}})=f'(B_{t_{n-1}})\Delta B_{{n-1}}+\frac{1}{2}f''(\xi_{n})(\Delta B_{{n-1}})^2
+$$
+其中，$\xi_n=B_{t_{n-1}}+\theta\Delta B_{{n-1}},\theta\in(0,1)$。
+于是，
+$$
+f(B_T)-f(B_0)=\sum_nf'(B_{t_{n-1}})\Delta B_{{n-1}}+\frac{1}{2}\sum_nf''(\xi_{n})(\Delta B_{{n-1}})^2
+$$
+对于右式第一项，其$L^2$收敛到伊藤积分$\int_0^Tf'(B_t)\mathrm{d}B_t$；而第二项将\textbf{依概率}收敛到$\frac{1}{2}\int_0^Tf''(B_t)\mathrm{d}t$。
+
+
+\begin{theorem}
+假设$f\in C^2$且$E\int_0^T|f'(B_t)|^2\mathrm{d}t,E\int_0^T|f''(B_t)|^2\mathrm{d}t<\infty$，那么对任意$T\ge0$
+    $$
+    f(B_T)-f(B_0)=\int_0^Tf'(B_t)\mathrm{d}B_t+\frac{1}{2}\int_0^Tf''(B_t)\mathrm{d}t
+    $$
+\end{theorem}
+\begin{proof}
+证明仅仅针对二阶项$\int_0^Tf''(B_t)\mathrm{d}t$。即我们需要证明
+$$
+\sum_n f''(\xi_{n})(\Delta B_{{n-1}})^2
+\stackrel{P}{\to}\int_0^Tf''(B_t)\mathrm{d}t
+$$
+\begin{enumerate}
+    \item 先证明
+    $$\sum_n f''(\xi_{n})(\Delta B_{{n-1}})^2\stackrel{a.s.}{\sim}\sum_n f''(B_{n-1})(\Delta B_{{n-1}})^2$$符号$\sim$表示在某种意义（$L^2$,a.s.,P）下两边的差是个无穷小量。
+    \item 再证明
+    $$\sum_n f''(B_{n-1})(\Delta B_{{n-1}})^2\stackrel{L^2}{\sim}\sum_n f''(B_{n-1})\Delta t_{{n-1}}$$
+    \item 然后证明
+    $$
+    \sum_n f''(B_{n-1})\Delta t_{{n-1}}\stackrel{a.s.}{\to}\int_0^Tf''(B_t)\mathrm{d}t
+    $$
+    \item 再加上$L^2,\text{a.s.}$均能推出依概率收敛。
+\end{enumerate}
+\end{proof}
+
+\subsubsection{伊藤过程、及其伊藤公式}
+\begin{definition}[伊藤过程]
+    \begin{equation}
+    X_t=X_0+\int_0^t\mu(s)\mathrm{d}s+\int_0^t\sigma(s)\mathrm{d}B_s
+    \label{ito pro}
+    \end{equation}
+    其中$\mu,\sigma\in L^2_T(\Omega)$
+\end{definition}
+
+类似的，考虑一个二阶偏导均存在且连续的二元函数$u(t,x)$，同样的考虑$[t_n,t_{n+1}]$上的差分形式
+$$
+\begin{aligned}
+    u(t_{n+1},X_{n+1})-u(t_{n},X_{n})
+    &=\partial_tu(t_{n},X_{n})\Delta t_n+\partial_xu(t_{n},X_{n})\Delta X_n\\
+    &+\frac{1}{2}\partial_{xx}^2u(\lambda_n,\xi_n)(\Delta X_n)^2\\
+    &+\frac{1}{2}\partial_{tt}^2u(\lambda_n,\xi_n)(\Delta t_n)^2\\
+    &+\partial_{tx}^2u(\lambda_n,\xi_n)\Delta t_n\Delta X_n
+\end{aligned}
+$$
+其中，$(\lambda_n,\xi_n)=(t_n,X_n)+\theta(\Delta t_n,\Delta X_n).\theta\in(0,1)$。可以发现$\partial_{tx}^2,\partial_{tt}^2$两项应当依概率收敛到$0$。此外，有趣的地方是$\Delta X_n$和$(\Delta X_n)^2$。从差分的角度来看，猜想$\Delta t_n$无穷小时
+$$
+\Delta X_n=\int_{t_n}^{t_{n+1}}\mu(s)\mathrm{d}s+\int_{t_n}^{t_{n+1}}\sigma(s)\mathrm{d}B_s
+\approx\mu_n\Delta t_n+\sigma_n\Delta B_n
+$$
+其中$\mu_n,\sigma_n$分别简记$\mu(t_n),\sigma(t_n)$。
+那么对于二次项类似有
+$$
+(\Delta X_n)^2
+\approx\mu_n^2(\Delta t_n)^2+\sigma_n^2(\Delta B_n)^2+\mu_n\sigma_n\Delta t_n\Delta B_n
+$$
+为了廓清视野，忽略高阶项$(\Delta t_n)^2,\Delta t_n\Delta B_n$，其必然随着极限为$0$。进而
+$$
+\begin{aligned}
+    \Delta u(t_n,X_n)
+    &\approx(\partial_t+\mu_n\partial_x+)u(t_{n},X_{n})\Delta t_n\\ 
+    &+\frac{1}{2}\sigma^2_n\partial_{xx}^2u(\lambda_{n},\xi_{n})(\Delta B_n)^2\\
+    &+\partial_xu(t_{n},X_{n})\Delta B_n\\
+\end{aligned}
+$$
+\begin{theorem}[关于伊藤过程的伊藤公式]
+    $$
+    \begin{aligned}
+    u(T,X_T)
+    &=u(0,X_0)+\int_0^T \partial_tu(s,X_s)\mathrm{d}s+\int_0^T\partial_xu(s,X_s)\mathrm{d}X_s+\frac{1}{2}\int_0^T\partial^2_{xx}u(s,X_s)(\mathrm{d}X_s)^2\\
+    &=u(0,X_0)+\int_0^T\left(\partial_tu(s,X_s)+\mu(s)\partial_xu(s,X_s)+\frac{1}{2}\sigma^2(s)\partial^2_{xx}u(s,X_s)\right)\mathrm{d}s\\
+    &+\int_0^T\sigma(s)\partial_xu(s,X_s)\mathrm{d}B_S\label{ito formula}
+    \end{aligned}
+    $$
+\end{theorem}
+第二个等式根据刚才的讨论中已经足够明晰，而重点在第一个等式。它定义了关于$X_t$和其二阶变差的随机积分。如果忽略式\ref{ito pro}中的第一项，即带$\mu_s$的项，$X_t$是关于布朗运动的随机积分。a_s$在$L^2_T$中，那么其还是\textbf{平方可积鞅}。通常称$\mu$为漂移项。由伊藤积分的性质，其是鞅。由于假设了过程$\sigm
+\begin{definition}
+称$X$是$[0,T]$上的平方可积鞅，如果其是鞅且满足
+    $$
+    \sup_{t\le T}E|X_t|^2<+\infty
+    $$
+\end{definition}
+不妨先考虑$\mu_s$为$0$的情形，即$X_t=\int_0^t\sigma(s)\mathrm{d}B_s$。其二阶变差$[X,X]_t=\int_0^t|\sigma_s|^2\mathrm{d}s$，简记为$[X]_t$。容易看出该随机过程的轨道单调递增。进一步，其也是连续的有界变差函数。我们不妨定义这样的过程为\textbf{单调增过程}
+\begin{definition}[单调增过程]
+    称过程$F$在$[0,T]$上为单调增过程，如果其轨道几乎处处单调增，且右连续。
+\end{definition}
+对于单调过程，其每个轨道都能定义Riemann-Stieltjes积分。容易知道下面这个极限a.s.收敛
+$$
+\lim_{\Delta\to0}\sum_n g(\xi_n,\omega)\Delta F_n(\omega)
+$$
+当然，过程$g$需要满足一定条件。简记上式的极限为$\int_0^Tg_t\mathrm{d}F_t$。鉴于我们这里的讨论仅限于伊藤公式\ref{ito formula}，$g=\sigma^2,F_t=[X]_t=\int_0^t\sigma^2_t\mathrm{d}t$。
+既然有了积分，就会考虑其微分。其微分就是$\mathrm{d}[X]_t$，或形象地写作$(\mathrm{d}X_t)^2$。形式上会有$\mathrm{d}[X]_t=\sigma^2_t\mathrm{d}t$。也就是说，需要证明
+$$
+\int_0^T Y_t\mathrm{d}[X]_t=
+\int_0^T Y_t\sigma^2_t\mathrm{d}t
+$$
+对于任意可积的$G_t$。证明很容易，不再赘言。
+
+另一方面，注意到$X$又是（轨道）连续的，
+我们可以类似于伊藤积分那样定义关于连续平方可积鞅的随机积分。以$M$表示一个连续的平方可积鞅过程。定义过程空间
+$$\begin{aligned}
+\mathcal{M}^2_T(\Omega)
+=\Big
+\{&Y=\{Y_t\}_{0\le t\le T}:Y(t,\omega)\space\text{measurable about}\space\mathcal{B}(0,T)\otimes\mathcal{F}\\
+&\land Y_t\space\text{measurable about}\space\mathcal{F}_t \\
+&\land E(\int_0^T|Y_t|^2\mathrm{d}[M]_t)<\infty\Big\}
+\end{aligned}
+$$
+同时$Y$循序可测。构造的具体细节不再展式，基本类似于伊藤积分。当$M_t=X_t=\int_0^t\sigma_s\mathrm{d}B_s$，容易证明
+$$
+\int_0^TY_t\mathrm{d}X_t=\int_0^TY_t\mu_t\mathrm{d}B_t
+$$
+
+当漂移项不为$0$，$X$便不一定是平方可积鞅，甚至连鞅也不一定是。但$\int_0^t\mu_s\mathrm{d}s$一定是\textbf{有界变差过程}，即轨道右连续且有有界变差的过程。所以$X$可以写作一个有界变差过程与一个鞅的和，通常称其为半鞅。于是还可以定义关于半鞅的随机积分，但在此不多言。只需知道
+$$
+\int_0^TY_t\mathrm{d}X_t=\int_0^TY_t\mu_t\mathrm{d}t+\int_0^TY_t\sigma_t\mathrm{d}B_t
+$$
+
+\section{SDE 的基本解法}
+\subsection{伊藤积分方程形式}
+$$
+X_t=X_s+\int_s^ta(u,X_u)\mathrm{d}u+\int_s^t b(u,X_u)\mathrm{d}B_u
+$$
+
+\subsection{Euler--Maruyama 离散化方法}
+随机微分方程
+\begin{equation}
+    \mathrm{d}X_t=a(X_t)\mathrm{d}t+b(X_t)\mathrm{d}B_t\label{eq1}
+\end{equation}
+
+Ito公式:
+$$
+    \mathrm{d}f(X_t)=f'(X_t)\mathrm{d}X_t+\frac{1}{2}f''(X_t)(\mathrm{d}X_t)^2
+$$
+with $(\mathrm{d}X_t)^2=b^2(X_t)\mathrm{d}t$
+进一步有
+\begin{equation}
+    \mathrm{d}f(X_t)=\left(a(X_t)f'(X_t)+\frac{1}{2}b^2(X_t)f''(X_t)\right)\mathrm{d}t+f'(X_t)b(X_t)\mathrm{d}B_t
+\label{eq2}\end{equation}
+\ref{eq1}完整的积分形式为
+$$\begin{aligned}
+    X_t-X_s
+    &=\int_s^t a(X_\tau)\mathrm{d}\tau+\int_s^tb(X_\tau)\mathrm{d}B_\tau
+    \end{aligned}
+$$
+取$s=t_{n},t=t_{n+1}$，则有
+\begin{equation}
+    \begin{aligned}
+        X_{t_{n+1}}-X_{t_n}
+        &=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}\\
+        &+\int_{t_{n}}^{t_{n+1}}[a(X_\tau)-a(X_{t_{n}})]\mathrm{d}\tau
+        +\int_{t_{n}}^{t_{n+1}}[b(X_\tau)-b(X_{t_{n}})]\mathrm{d}B_\tau
+    \end{aligned}\label{eq3}
+\end{equation}
+
+对$a(X_\tau)-a(X_{t_{n}})$和$b(X_\tau)-b(X_{t_{n}})$使用式\ref{eq2}。当然，需要$a,b$均满足光滑性条件。简记算子$L_1f(x)=a(x)f'(x)+\frac{1}{2}b(x)f''(x)$，$L_2f(x)=b(x)f'(x)$。以上两式可以简写为
+\begin{equation}\label{eq6}
+a(X_\tau)-a(X_{t_{n}})=\int_{t_n}^\tau L_1a(X_s)\mathrm{d}s+\int_{t_n}^\tau L_2a(X_s)\mathrm{d}B_s
+\end{equation}
+\begin{equation}\label{eq7}
+b(X_\tau)-b(X_{t_{n}})=\int_{t_n}^\tau L_1b(X_s)\mathrm{d}s+\int_{t_n}^\tau L_2b(X_s)\mathrm{d}B_s
+\end{equation}
+不难发现算子$L_1,L_2$都是线性的。再记式\ref{eq3}的后两项之和为$R$那么
+\begin{equation}\begin{aligned}
+R(N,X)
+&=\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_1a(X_s)\mathrm{d}s+
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_2a(X_s)\mathrm{d}B_s\\
+&+\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_1b(X_s)\mathrm{d}s
++\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_2b(X_s)\mathrm{d}B_s
+\end{aligned}\label{eq8}\end{equation}
+可以把$R$这一项视作误差项。\ref{eq3}就能简记成
+\begin{equation}
+    \Delta X_{t_n}=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}+R(N,X)\label{eq4}
+\end{equation}
+根据一般将\textbf{ode}转化成差分方程的经验，要数值解方程\ref{eq1}，不妨考虑它的差分形式
+$$
+    \Delta X_{t_n}=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}
+$$
+又注意到，式\ref{eq4}中若$R(N,X)=0$，那么其形式完全等同于\textbf{差分形式}。$R(N,X)$便可视作误差项。只要$\Delta\to0$时，$R(N,X)\to0$。那么在一定的条件限制下（如$a,b$的\textbf{Lipschitz}条件），那么差分方程的解或许能逐渐逼近真解。实际上，这便是\textbf{Euler-Maruyama scheme}：
+\begin{equation}
+    \bar{X}_{t_{n+1}}=\bar{X}_{t_n}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}\label{em}
+\end{equation}
+实际上，前两个条件是为了放缩证明过程中的不等式。
+前文在讨论\textbf{EM-scheme}时，考虑对$[0,T]$做等划分。这里我们一般化，规定一般划分。并记住$\delta=\max_n|\Delta_n|$。
+
+
+既然$R(N,X)$是误差项，不估计一下阶怎么行呢？在此不妨假设对区间$[0,T]$进行等划分，即$\Delta t_n=\Delta=T/N$
+$$
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_1a(X_s)\mathrm{d}s\approx
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_1a(X_{t_n})\mathrm{d}s\approx
+\frac{1}{2}L_1a(X_{t_n})\Delta^2
+$$
+同理
+\begin{equation}
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_2a(X_s)\mathrm{d}B_s\approx
+\frac{1}{2}L_1a(X_{t_n})\Delta^{3/2}
+\label{eq5}\end{equation}
+$$
+\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_1b(X_s)\mathrm{d}s\approx
+\frac{1}{2}L_1b(X_{t_n})\Delta^{3/2}
+$$
+$$
+\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_2b(X_s)\mathrm{d}B_s\approx
+\frac{1}{2}L_2b(X_{t_n})(B_\Delta^2-\Delta)\approx
+\frac{1}{2}L_2b(X_{t_n})\Delta
+$$
+细节详见\ref{AppendixA}。注意到，上述阶中的主要部分为$O(\Delta)$，对应项为$\int\mathrm{d}B_\tau\int\mathrm{d}B_s$。尽管\textbf{E-M scheme}形式简单，但收敛性差了些。为改善\textbf{E-M scheme}的收敛性，考虑$O(\Delta)$就得到了\textbf{Milstein scheme}。
+
+\subsection{Milstein Scheme}
+$$
+\bar{X}_{t_{n+1}}=\bar{X_{t_n}}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}+\frac{1}{2}L_2b(X_{t_n})(B_\Delta^2-\Delta)    
+$$
+
+\subsubsection{Higher Order}
+回忆我们之前怎么得到的\textbf{Milstein scheme}：对\ref{eq3}使用\ref{eq6}和\ref{eq7}。恰一看和\textbf{Taylor expansion}类似。那继续用\ref{eq6}、\ref{eq7}对\ref{eq8}进行展开，再忽略高阶项；。便得到
+$$\begin{aligned}
+R(\Delta,X)
+&=\sum_{i_1,i_2}L_{i_1}a_{i_1}(X_{t_n})\Delta_{i_1,i_2}\\
+&+\sum_{i_1,i_2,i_3}\int_{t_n}^{t_{n+1}}\int_{t_n}^{s_1}\int_{t_n}^{s_2}L_{i_1}L_{i_2}a_{i_3}(X_{s_3})\mathrm{d}B_{s_1}^{i_1}\mathrm{d}B_{s_2}^{i_2}\mathrm{d}B_{s_3}^{i_3}
+\end{aligned}$$
+其中$i_1,i_2,i_3=0,1$，$a_1,a_2=a,b$，$\Delta_{i_1,i_2}=\int_{t_n}^{t_{n+1}}\int_{t_n}^{s_1}\mathrm{d}B_{s_1}^{i_1}\mathrm{d}B_{s_2}^{i_2}$。
+而
+$$\mathrm{d}B_{s_j}^{i_j}=\begin{cases}
+\mathrm{d}s_j;&i_j=0\\
+\mathrm{d}B_{s_j};&i_j=1
+\end{cases}
+\space j=1,2,3
+$$
+于是得到高阶的\textbf{E-M scheme}:
+$$
+\begin{aligned}
+    \bar{X}_{t_{n+1}}
+    &=\bar{X}_{t_n}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}\\
+    &+\sum_{i_1,i_2}L_{i_1}a_{i_1}(\bar{X}_{t_n})\Delta_{i_1,i_2}
+\end{aligned}
+$$
+\subsubsection{First Order Derivative Free Schemes}
+注意到\textbf{Milstein scheme}中$L_2b(X_{t_n})$包含求导项。而本小节标题意在避免求导项。因为$L_2b(X_{t_n})=bb'(X_{t_n})$，考虑
+$$
+\tilde{X}_{t_{n+1}}=X_{t_n}+a(X_{t_n})\Delta+b(X_{t_n})\sqrt{\Delta}
+$$
+之所以考虑上式的形式，是由于这样一个粗糙但实用的估计：$\Delta B_{t_n}\approx\sqrt{\Delta t_{n}}$
+使用非随机性的泰勒展开即可知道
+$$
+\frac{1}{\sqrt{\Delta}}\left(b(\tilde{X}_{t_{n+1}})-b({X}_{t_{n+1}})\right)$$
+是对$bb'(X_{t_n})$的逼近。因此有\textbf{First Order Derivative Free Schemes}：
+$$
+\bar{X}_{t_{n+1}}=\bar{X_{t_n}}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}+\frac{1}{2}\frac{1}{\sqrt{\Delta}}\left(b(\tilde{X}_{t_{n+1}})-b({X}_{t_{n+1}})\right)(B_\Delta^2-\Delta)    
+$$
+\subsection{收敛性}
+\subsubsection{强收敛\&弱收敛}
+定义
+$$
+\epsilon_{t}(\delta)=\sup_{0\leq s\leq t}E|\bar{X}_{s}^{\delta}-X_{s}|
+$$
+$$
+r_{t}(\delta)=\sup_{0\le s\le t}\left|E(\phi(\bar{X}_{s}^{\delta}))-E(\phi_{s}({X}_{s}))\right|
+$$
+其中,$\phi\in C_b^\infty$，即有界光滑，且各阶导数均有界的函数。$\epsilon_{t}^{\delta},r_{t}^{\delta}$分别引出强收敛、弱收敛的概念。
+\begin{definition}[强收敛]
+    若存在$\alpha,\delta_0,C>0$使得对任意$0<\delta<\delta_0$满足
+    $$
+    \epsilon_{t}(\delta)\le C\delta^\alpha
+    $$
+    则称$\bar{X}^\delta$以阶数$\alpha$强收敛到$X$
+\end{definition}
+
+\begin{definition}[弱收敛]
+    若存在$\alpha,\delta_0,C>0$使得对任意$0<\delta<\delta_0$满足
+    $$
+    r_{t}(\delta)\le C\delta^\alpha,\forall\phi\in C_b^\infty
+    $$
+    则称$\bar{X}^\delta$强收敛到$X$
+\end{definition}
+下面仅仅证明\textbf{Euler-Maruyama scheme}的半阶强收敛性，以及一阶弱收敛性。
+\subsubsection{EM-Scheme的强收敛性}
+为讨论收敛性，需要加强一些条件。因为之前的讨论中还没详细约定符号，现在给出具体说明。
+\begin{itemize}\label{conditions}
+    \item 条件1(Lipschitz)：$a(t,x),b(t,x)$关于第二变量是\textbf{Lipschitz}的。即满足
+    $$|a(t,x)-a(t,y)|\le L|x-y| $$
+    \item 条件2(linear increasing)：$a,b$均对第二变量满足线性增长条件。即满足
+    $$|a(t,x)|^2+|b(t,x)|^2\le C(1+|x|^2) $$
+    \item 条件3（$L^2$）：$a,b$都是$L^2$的
+    \item 条件4（initial value）：$X_0$关于$\mathcal{F}_0$可测且是$L^2$的（$E(||^2)<\infty$）
+\end{itemize}
+详细注明见\ref{appendixB}。上述四个条件总是必要的，接下来的内容默认以上条件成立。后面将不再赘述。
+
+\subsubsection{EM-Scheme的弱收敛}
+介绍弱收敛之前先介绍抛物算子的随机解。在弱收敛的证明里能用上。
+\begin{definition}[抛物算子]
+    $$
+    \partial_t+\mathcal{L}=\partial_t+a\partial_x+\frac{1}{2}b^2\partial_x^2
+    $$
+\end{definition}
+
+\begin{definition}[终值抛物微分方程(deterministic)]
+假设$g$是有界函数
+    $$
+    \begin{cases}
+        \partial_tu+\mathcal{L}u+gu=0&\\
+        u(T,x)=f(x)&\\
+    \end{cases}
+    u:[0,T]\times\mathbb{R}\label{parabolic}
+    $$
+\end{definition}
+
+\begin{lemma}
+\ref{diffeq}的随机解为
+    $$
+    u(t,x)=E\left(f(X_T)\exp\left(\int_s^Tg(X_u)\mathrm{d}u\right)\Bigg|X_s=x\right)
+    $$
+    其中$X_t$是$It\hat{o}$。
+\end{lemma}
+记$C_P^{l}$为有多项式增长的$2l$次连续可微函数空间。所谓多项式增长指对任意$k\le l$，存在$C,p$使得
+$$
+|\partial_x^ku|\le C(1+|x|^{2p})
+$$
+为了使证明得以成立，我们需要用上两个引理。
+\begin{lemma}
+    假设$a,b,f\in C_P^{2l}$，且$a,b$各阶导数一致有界那么$u\in C_P^{2l}$。$u$满足微分方程\ref{parabolic}
+\end{lemma}
+\begin{lemma}
+设$\{Y_n\}_{n=0}^{n_T}$是\textbf{EM scheme}\ref{em}生成的一列随机变量。假设$E(|X_0|^{2l})=E(|Y_0|^{2l})<\infty$
+那么有如下矩估计
+    $$\sup_nE(|Y_{n}|^{2l})<\infty$$
+\end{lemma}
+实际上，可以通过证明以下不等式得到
+$$
+E(|Y_{n+1}|^{2l})\le K_1E(|Y_{n}|^{2l})+K_2\left((\Delta t_n)^{2l}+(\Delta t_n)^{l}\right)
+$$
+BTW，一般的SDE也有类似的矩估计。
+
+该定理的证明的核心在于利用\textbf{Gronwall}不等式和$It\hat{o}$公式。现在，正式给出\textbf{EM scheme}1阶弱收敛定理的详细描述
+
+\begin{theorem}[EM Scheme的1阶弱收敛性]
+    设$a,b,f\in C_P^{2l}$且他们的各阶导数均一致有界。那么\textbf{EM scheme}\ref{em}1阶弱收敛于真解。
+\end{theorem}
+细节详见\ref{B2}
+
+\subsection{Ornstein--Uhlenbeck 过程}
+
+Ornstein--Uhlenbeck（OU）过程是最经典的均值回归模型：状态在噪声驱动下不断波动，但存在朝向长期均值 $\mu$ 的回拉。其一维 SDE 为
+\begin{equation}\label{eq:OU}
+  \mathrm{d}X_t=\theta(\mu-X_t)\,\mathrm{d}t+\sigma\,\mathrm{d}B_t,
+  \qquad \theta>0,\ \sigma>0,
+\end{equation}
+其中 $\theta$ 为回归速度，$\mu$ 为长期均值，$\sigma$ 为扩散强度。该模型等价于物理中的朗之万方程在线性摩擦势下的情形，亦是唯一具有指数型自协方差核的平稳高斯马尔可夫过程。对 \eqref{eq:OU} 乘以积分因子 $e^{\theta t}$ 并积分可得显式解
+\[
+  X_t=\mu + (X_s-\mu)e^{-\theta (t-s)}+\sigma\!\int_s^t e^{-\theta (t-u)}\,\mathrm{d}B_u,
+\]
+因此 $X_t$ 条件于 $X_s=x$ 为正态分布：
+\[
+  \mathbb{E}[X_t\mid X_s=x] = \mu + (x-\mu)e^{-\theta\Delta},\qquad
+  \operatorname{Var}(X_t\mid X_s=x) = \frac{\sigma^2}{2\theta}\bigl(1-e^{-2\theta\Delta}\bigr),\quad \Delta=t-s.
+\]
+从而转移分布为
+\[
+  X_t\mid X_s=x \sim \mathcal{N}\!\left(\mu+(x-\mu)e^{-\theta\Delta},\ \frac{\sigma^2}{2\theta}(1-e^{-2\theta\Delta})\right).
+\]
+若取初值 $X_0\sim \mathcal{N}(\mu,\ \sigma^2/(2\theta))$，则 $X_t$ 平稳，且 $\mathbb{E}[X_t]=\mu$，方差为 $\sigma^2/(2\theta)$，自协方差函数为
+\[
+  \operatorname{Cov}(X_t,X_{t+\tau})=\frac{\sigma^2}{2\theta}\,e^{-\theta \tau},\qquad \rho(\tau)=e^{-\theta \tau}.
+\]
+因此 OU 是高斯、马尔可夫且具有指数自相关的平稳过程，其唯一平稳分布为 $\mathcal{N}(\mu,\sigma^2/(2\theta))$。OU 的无穷小生成元为
+\[
+  \mathcal{L}\varphi(x)=\theta(\mu-x)\varphi'(x)+\tfrac{\sigma^2}{2}\varphi''(x),
+\]
+对应的 Fokker--Planck 方程为
+\[
+  \partial_t p = -\partial_x\!\big(\theta(\mu-x)p\big)+\tfrac{\sigma^2}{2}\,\partial_{xx}^2 p,
+\]
+其唯一平稳解正是上述正态分布。由于 OU 方程线性可解，在任意步长 $\Delta$ 下都有精确离散化
+\[
+  X_{t+\Delta}=\mu+(X_t-\mu)e^{-\theta\Delta}
+  +\sigma\,\sqrt{\tfrac{1-e^{-2\theta\Delta}}{2\theta}}\;Z,\qquad Z\sim\mathcal{N}(0,1),
+\]
+这与 AR(1) 形式一致，因此常用于参数估计与模拟。相比之下，Euler--Maruyama 离散化
+\[
+  X_{n+1}^{\text{EM}}=X_n+\theta(\mu-X_n)\Delta+\sigma\sqrt{\Delta}\,Z_n
+\]
+仅为强阶 $1/2$ 的近似，在大步长或强均值回归下偏差更明显。最后，通过 Ito 公式可得矩方程封闭：均值满足 $m'(t)=\theta(\mu-m(t))$，解为 $m(t)=\mu+(m(0)-\mu)e^{-\theta t}$；方差满足 $v'(t)=-2\theta v(t)+\sigma^2$，若 $X_0$ 确定则 $v(t)=\frac{\sigma^2}{2\theta}(1-e^{-2\theta t})$。
+
+\appendix
+\section{阶的粗糙估计\label{AppendixA}}
+式\ref{eq5}的估计稍微有些复杂。简单而言，就是对$\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau\mathrm{d}B_s$的估计。实际上就是对
+$$
+D_\Delta=\int_{0}^{\Delta} B_t\mathrm{d}t
+$$
+的估计。$I_\Delta$是$It\hat{o}$过程。不难求得$E(I_\Delta)=0$。应用$It\hat{o}$公式，有
+$$\begin{aligned}
+I_\Delta^2
+&=2\int_0^\Delta\int_0^tB_uB_t\mathrm{d}u\mathrm{d}t\\
+&=2\int^\Delta_0\int_0^t B_u(B_t-B_u)\mathrm{d}u\mathrm{d}t+2\int^\Delta_0\int_0^t B_u^2\mathrm{d}u\mathrm{d}t
+\end{aligned}$$
+因此
+$$
+E(I_\Delta^2)=2\int^\Delta_0\int_0^t E(B_u^2)\mathrm{d}u\mathrm{d}t=\Delta^3/3
+$$
+又或者，根据随机分布积分
+$$
+\int_0^\Delta B_t\mathrm{d}t+\int_0^\Delta t\mathrm{d}B_t=\Delta B_\Delta
+$$
+因此有
+$$
+I_\Delta^2=\Delta^2B_T^2+(\int_0^\Delta t\mathrm{d}B_t)^2-2\Delta\int_o^\Delta\mathrm{d}B_t\int_0^\Delta t\mathrm{d}B_t
+$$
+于是 $E(I_\Delta^2)=\Delta^3+\Delta^3/3-\Delta^3$ 。后两项利用了 $It\hat{o}$ 积分的性质。
+而
+$$
+\int_0^\Delta\int_0^t\mathrm{d}B_s\mathrm{d}B_t=\int_0^\Delta B_t\mathrm{d}B_t=\frac{1}{2}(B_\Delta^2-\Delta)
+$$
+可以记住几个粗糙但很实用的估计：$\mathrm{d}B_t\approx\sqrt{\mathrm{d}t},\mathrm{d}t\mathrm{d}B_t\approx0,(\mathrm{d}B_t)^2\approx\mathrm{d}t$。$\approx0$是在忽略高阶项的意义下成立。而第三项是对\textbf{二阶变差}的观察。
+
+\section{EM-Scheme收敛性证明具体细节\label{appendixB}}
+\subsection{强收敛}
+各种前置条件见\ref{conditions}
+$$
+\begin{aligned}
+E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}
+&=E\left|\sum_{n=0}^{n_{s}-1}\Delta\bar{X}_{t_n}^{\delta}-\int_{0}^{s}a\left(\tau,X_{\tau}\right)\mathrm{d}\tau-\int_{0}^{s}b\left(\tau,X_{\tau}\right)dW_{\tau}\right|^2 \\
+&=E\Bigg|\int_{0}^{s}\left(a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right)\mathrm{d}\tau+\int_{0}^{s}\left(b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right)\mathrm{d}B_{\tau}\\
+&+\int_{n_{s}}^{s}a(\tau,X_{\tau})\mathrm{d}\tau+\int_{n_{s}}^{s}b(\tau,X_{\tau})\mathrm{d}B_{\tau}\Bigg|^{2} \\
+&\le C\Bigg\{
+E\left|\int_{0}^{s}\left(a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right)\mathrm{d}\tau\right|^2\\
+&+E\left|\int_{0}^{s}\left(b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right)\mathrm{d}B_\tau\right|^2\\
+&+E\Bigg|\int_{n_{s}}^{s}a(\tau,X_{\tau})\mathrm{d}\tau\Bigg|^{2} +E\Bigg|\int_{n_{s}}^{s}b(\tau,X_{\tau})\mathrm{d}B_{\tau}\Bigg|^{2} 
+\Bigg\}
+\end{aligned}
+$$
+又
+$$\begin{aligned}
+E\left|\int_{0}^{s}\left(a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right)\mathrm{d}\tau\right|^2
+&\le sE\int_0^s\left|a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right|^2\mathrm{d}\tau\\
+&\le
+s\int_0^sE\left|\bar{X}_{n_\tau}^{\delta}-X_{\tau}\right|^2\mathrm{d}\tau
+\end{aligned}$$
+
+$$\begin{aligned}
+E\left|\int_{0}^{s}\left(b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right)\mathrm{d}B_\tau\right|^2
+&=
+E\int_0^s\left|b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right|^2\mathrm{d}\tau\\
+&\le
+\int_0^sE\left|\bar{X}_{n_\tau}^{\delta}-X_{\tau}\right|^2\mathrm{d}\tau
+\end{aligned}$$
+
+$$\begin{aligned}
+E\Bigg|\int_{n_{s}}^{s}a(\tau,X_{\tau})\mathrm{d}\tau\Bigg|^{2} +E\Bigg|\int_{n_{s}}^{s}b(\tau,X_{\tau})\mathrm{d}B_{\tau}\Bigg|^{2}
+&\le(s-n_s)\left\{
+E\int_{n_{s}}^{s}\left|a(\tau,X_{\tau})\right|^2+\left|b(\tau,X_{\tau})\right|^2\mathrm{d}\tau\right\}\\
+&\le2(s-n_s)\left\{
+E\int_{n_{s}}^{s}1+\left|X_{\tau}\right|^2\mathrm{d}\tau\right\}
+\end{aligned}$$
+现在，统合无穷小项，忽略高阶项，我们有：
+$$
+E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}
+\le
+C_1\int_0^sE\left|\bar{X}_{n_\tau}^{\delta}-X_{\tau}\right|^2\mathrm{d}\tau
++C_2(s-n_s)
+$$
+由\textbf{GronWall}不等式，必有
+$$
+E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}
+\le
+C_2(s-n_s)
++
+C_1\int_0^s
+(\tau-n_\tau)e^{C_1(s-\tau)}
+\mathrm{d}\tau
+,\forall 0\le s\le T
+$$
+对于上式，积分项其实是高阶项。忽略高阶项后有
+$\sup_{0\le s\le T} E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}\le C\delta$。于是
+$$
+\epsilon_{T}(\delta)
+\le
+\sqrt{\sup_{0\le s\le T} E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}}\le C\delta^{1/2}
+$$
+这就证明了\textbf{EM-Scheme}的半阶强收敛性。
+
+\subsection{弱收敛\label{B2}}
+为了方便，我们简写记号：$Y_n$表示由\textbf{EM scheme}在时刻$t_{n}$生成的随机变量，而$B_n=B_{_{t_n}}$。
+因为$f\in C_P^{2l}$，考虑终值微分方程
+$$
+\begin{cases}
+        \partial_tu+\mathcal{L}u=0&\\
+        u(T,x)=f(x)&\\
+    \end{cases}
+    u:C^2_P([0,T]\times\mathbb{R}\label{diffeq})
+$$
+则有
+$$
+u(t,x)=E(f(X_T)|X_t=x)
+$$
+因此，$$\begin{aligned}
+E(f(Y_{T}))-E(f(X_T))
+&=E(u(T,Y_T))-E(u(0,Y_0))\\
+&= E \left( \sum_{n=0}^{n_T-1} \left( u(t_{n+1}, Y_{n+1}) - u(t_n, Y_{n}) \right) \right)\\
+&= E \left( \sum_{n=0}^{n_T-1} \left( u(t_{n+1}, Y_{n+1}) - u(t_n, Y_{n}) \right) \right)
+\end{aligned}$$
+简记$\Delta u(t_n,Y_n)= u(t_{n+1}, Y_{n+1}) - u(t_{n}, Y_{n})$
+使用Taylor展开
+\begin{equation}\begin{aligned}
+\Delta u(t_n,Y_n)
+&=\sum_{k=1}^3\frac{1}{k!}\left\{\Delta t_n(\partial_t+a\partial_x)+\Delta B_nb\partial_x\right\}^ku(t_n,Y_n)+R_n(Y_{n+1})\\
+&=A(Y_n)+R_n(Y_{n+1})
+\label{weak taylor}
+\end{aligned}\end{equation}
+$$
+R_n(Y_{n+1})=\frac{1}{4!}\left\{\Delta t_n(\partial_t+a\partial_x)+\Delta B_nb\partial_x\right\}^4u(\tau_n,\xi_n),\theta\in(0,1)
+$$
+巧用条件概率，可以消去\ref{weak taylor}中包含$\Delta B_n$的奇数次项。
+$$
+|E(\Delta u(t_n,Y_n))|
+\le
+|E\{E(A(Y_n)|\mathcal{F}_n)\}|+E|R_n(Y_{n+1})|
+$$
+现在，$E(A(Y_n)|\mathcal{F}_n)$中将不包含$\Delta B_n$及其高次项，而仅仅包含$\Delta t_n$的多次项。其中的一次项刚好是
+$$
+(\partial_t+\mathcal{L})u(t_n,Y_n)\Delta t_n=0
+$$
+而$E|R_n(Y_{n+1})|$中的最低次项为$(\Delta t_n)^2$
+于是有
+$$
+|E(\Delta u(t_n,Y_n))|\le(\Delta t_n)^2E(K(a,b,u))+O((\Delta t_n)^2)
+$$
+$K(a,b,u)$表示$a,b$,$u$和$u$的各阶偏导的组合。由定理假设，$E(K(a,b,u))$有界。因此
+$$
+\sum_{n=0}^{n_T-1}|E(\Delta u(t_n,Y_n))|\le C\Delta t_n
+$$
+证毕。\textbf{EM scheme}一阶弱收敛
+\end{CJK*}
+\end{document}

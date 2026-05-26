@@ -1,0 +1,831 @@
+\documentclass{article}
+\usepackage{CJKutf8}
+\usepackage{graphicx}
+\usepackage{math_blog}
+\usepackage{amsmath}
+\usepackage{appendix}
+\usepackage[normalem]{ulem}
+\usepackage[thicklines]{cancel}
+\title{[SDE II] Introduction to Itô Integrals and Numerical Methods}
+\author{Anqiao Ouyang, Xuecheng Liu}
+\date{August 29, 2025}
+
+\newcommand{\Title}{Introduction to Itô Integrals}
+
+\newcommand{\Column}{Stochastic Differential Equations I}
+\newcommand{\Author}{Anqiao Ouyang, Xuecheng Liu}
+
+\begin{document}
+\begin{CJK*}{UTF8}{gbsn}
+
+\maketitle
+
+\section{From ODEs to SDEs}
+\subsection{Deterministic Systems}
+
+In classical differential equation theory, we often consider deterministic dynamical systems of the form
+\[
+  \frac{\mathrm{d}X_t}{\mathrm{d}t} = f(X_t,t), \qquad X(0)=x_0
+\]
+Here $X_t$ describes the state evolving over time, and $f$ is the drift term of the system, which determines the deterministic trajectory.  
+Under this setting, given the initial value $x_0$, the solution $X_t$ is uniquely determined by $f$.
+
+However, in many practical problems, the system is affected by noise, environmental disturbances, or uncontrollable factors, and a pure ODE is insufficient to capture these uncertainties.
+
+\subsection{From Determinism to Stochastic Dynamics}
+
+Within the framework of classical ordinary differential equations (ODEs), the evolution of the system is fully governed by a deterministic drift term. For example,
+\[
+  \mathrm{d}X_t = f(X_t,t)\,\mathrm{d}t, \qquad X(0)=x_0,
+\]
+its solution $X_t$ is uniquely determined as a function once the initial value is specified. Such a model is suitable for describing idealized, noise-free systems.
+
+In practice, however, systems are often subject to uncontrollable external factors or microscopic uncertainties, and a pure ODE cannot capture such “unpredictable fluctuations.” Therefore, it is necessary to introduce stochastic perturbations on top of deterministic dynamics.
+
+\medskip
+A natural approach is to add a noise-driven term to the drift term of the ODE. For example,
+\[
+  \mathrm{d}X_t = f(X_t,t)\,\mathrm{d}t + \sigma\,\mathrm{d}B_t,
+\]
+where $B_t$ is a standard Brownian motion (a continuous martingale process with mean zero and variance $t$), and $\sigma>0$ denotes the noise intensity. The additional term $\sigma\,\mathrm{d}B_t$ describes the persistent random disturbances to the trajectory on top of the average trend $f$. Intuitively, the drift term determines the “overall trend,” while the Brownian noise determines the “local fluctuations.”
+
+More generally, the strength of the noise itself may depend on the current state and time. In that case, one writes
+\[
+  \mathrm{d}X_t = f(X_t,t)\,\mathrm{d}t + g(X_t,t)\,\mathrm{d}B_t,
+\]
+where $g(X_t,t)$ is called the \textbf{diffusion coefficient}, which modulates the amplitude of the stochastic disturbance. This leads to the most common form of the \textbf{stochastic differential equation} (SDE).
+
+\medskip
+From a mathematical perspective, the key difference between SDEs and ODEs lies in the nature of their solutions: the solution $X_t$ to an ODE is a deterministic function, while the solution to an SDE is a stochastic process defined on a probability space. Here $f(X_t,t)$ is still the “drift term,” determining the average direction of the system, while $g(X_t,t)\,\mathrm{d}B_t$ is the “diffusion term,” which introduces non-smooth, uncertain path structures through Brownian motion. Since Brownian paths are almost surely nowhere differentiable, the term $g(X_t,t)\,\mathrm{d}B_t$ must be interpreted within the framework of Itô or Stratonovich integration.
+
+SDEs not only generalize ODEs in form, but also fundamentally make the solution a family of trajectories in a probabilistic sense. This transition requires stochastic integration theory (Itô integrals, Itô’s lemma, etc.) to be rigorously defined and analyzed.
+
+\section{Itô Integral and Itô’s Lemma}
+\subsection{Non-differentiability of Brownian Motion and the Integration Problem}
+One can prove the non-differentiability of Brownian motion paths by showing the following probability result. Consider the right-hand derivative:
+$$
+P(\{\lim_{t\to0^+} \tfrac{B_{t+h}-B_t}{h}\ \text{exists}\})=0
+$$
+However, directly describing the event $\{\lim_{t\to0^+} \tfrac{B_{t+h}-B_t}{h}\ \text{exists}\}$ is very difficult.  
+A common trick in probability theory is that if we want to prove $P(A)=0$ but the event $A$ is hard to handle, we relax it to a slightly larger event $B\supset A$, and then prove $P(B)=0$.  
+From analysis, when limits are difficult, one may first look at boundedness. Having boundedness is easier than having a limit. {First consider the absence of a right-hand derivative at $t=0$.}
+
+{If a function $f(t)$ is differentiable at $0$, then}
+$$
+\exists n,k\in \mathbb{N}_+,\ \forall t\in[0,1/k),\ \text{s.t.}\ |B_t|\le nt
+$$
+{Fixing $n,k$, denote the event $A(n,k)=\{\forall t\in[0,1/k),\ |B_t|\le nt\}$. Then we must have}
+$$
+\{\lim_{h\to0^+} \tfrac{B_{t+h}-B_t}{h}\ \text{exists}\}\subset
+\bigcup_{n=1}^\infty\bigcup_{k=1}^\infty A(n,k)
+$$
+{However, $A(n,k)$ may not be measurable. Thus, we need to find an even larger null set containing it.} To relax the condition, one can proceed cleverly: {$A(n,k)$ requires the property for all $t<1/k$.} We can weaken this to a countable or even finite set.
+
+First, by using the countability of rational numbers, we can restrict to $t\in \mathbb{Q}\cap[0,1/k)$. Then,
+$$
+A(n,k)\subset C(n,k)=\{\forall t\in[0,1/k)\cap \mathbb{Q},\ |B_t|\le nt\}
+=\bigcap_{p\in \mathbb{Q}\cap[0,1/k)}\{|B_p|\le np\}
+$$
+It is easy to calculate that $P(|B_p|\le np)\le\sqrt{(1-e^{-n^2p})/2\pi}$, hence $P(C(n,k))=0$.
+
+By properties of Brownian motion, we know it has no right-hand derivative at any point in $[0,1)$. But this does not imply that it is almost surely nowhere differentiable on $[0,1)$. The essential reason is that
+$$
+\forall t\in[0,1],\ P(A_t)=0\ \not\Rightarrow\ P\big(\bigcup_{t\in[0,1]}A_t\big)=0.
+$$
+This only holds when the index set is countable. A simple example: if $X$ is a continuous random variable, then $P(X=x)=0$ for all $x\in\mathbb{R}$; but $P(X\in\mathbb{R})=1$.
+
+Thus, we must focus on the entire interval $[0,1)$. Redefine
+$$
+A(n,k)=\{\exists t\in[0,1),\ \forall h\in[0,1/k),\ |B_{t+h}-B_t|\le nh\}.
+$$
+Again, we need to relax the restriction and find $B(n,k)\supset A(n,k)$. The difficulty is that measure theory has poor properties with continuum indices (like $t\in[0,1)$). We continue by discretizing the parameter:
+
+\begin{itemize}
+    \item Partition $[0,1)$ into intervals. Then for any $t\in[0,1)$, $t$ lies in some $[t_j,t_{j+1})$. If the partition is fine enough, then for $\omega\in A(n,k)$ we must have
+    $$
+    |B_{t_{j+2}}(\omega)-B_{t_{j+1}}(\omega)|\le |B_{t_{j+1}}(\omega)-B_t(\omega)|+|B_{t_{j+2}}(\omega)-B_t(\omega)|\le n(t_{j+1}+t_{j+2}-2t_j).
+    $$
+    For equal partitions with spacing $\Delta$, we have
+    $$
+    |B_{t_{j+2}}(\omega)-B_{t_{j+1}}(\omega)|\le 3n\Delta.
+    $$
+    \item Suppose $[0,1)$ is divided into $m$ equal parts. From above, it suffices to have $1/m < 1/2k$. Define
+    $$
+    C(m,n,k)=\bigcup_{j=0}^{m-1}\{|B_{t_{j+1}}-B_{t_j}|\le 3n/m\}.
+    $$
+    \item But $C(m,n,k)$ is not yet a null set. Still, for all $m\ge3k$, we have $A(n,k)\subset C(m,n,k)$. Taking the intersection over all such $m$, we are likely to obtain a null set. Let
+    $$
+    B(n,k)=\bigcap_{m\ge3k}C(m,n,k).
+    $$
+    It is not hard to prove this is a null set.
+    \item In summary,
+    $$
+    A(n,k)\subset C(m,n,k)\ \Rightarrow\ A(n,k)\subset B(n,k)\ \Rightarrow\ \bigcup_n\bigcup_k A(n,k)\subset \bigcup_n\bigcup_k B(n,k),
+    $$
+    and since $P(B(n,k))=0$ for all $n,k$, the path of $B_t$ is almost surely non-differentiable.
+\end{itemize}
+
+\subsection{Definition of the Itô Integral}
+\subsubsection{Itô Integral of Predictable Simple Processes}
+Definition of a predictable simple process:
+\begin{definition}
+A stochastic process $H=\{H_t\}$ is called a predictable simple process if there exists a partition of the interval $[0,T]$
+    $$0=t_0<t_1<\cdots<t_N=T$$
+such that $H$ is constant on each interval $t_n< t\le t_{n+1}$. That is, there exists a sequence of random variables $\{H_n\}_{n=1}^N$ such that
+    $$
+    H_t=\sum_{n=0}^{N-1}H_n\,\mathbf{1}_{(t_n,t_{n+1}]}(t)+H_0\,\mathbf{1}_{\{0\}}(t)),
+    $$
+where $E(|H_n|^2)<\infty$, $H_t$ is $\mathcal{F}_{t_n}$-measurable for $t\in(t_n,t_{n+1}]$, and $H_0$ is $\mathcal{F}_0$-measurable.
+\end{definition}
+
+Intuitively, the trajectory of such a process is a step function. Predictability means it is right-continuous with left limits. We can then define the Itô integral for simple processes:
+
+\begin{definition}[Itô Integral for Simple Processes]
+Let $H$ be an adapted simple process. Define
+    $$
+    I_T(H)=\sum_{n=1}^N H_n\Delta B_{t_n}.
+    $$
+Then $I_T(H)$ is called the Itô integral with respect to $H$, denoted by
+    $$
+    \int_0^T H_t\,\mathrm{d}B_t.
+    $$
+\end{definition}
+
+The construction of the Itô integral is similar to that of the Lebesgue integral: first define the integral for a class of simple objects, then extend it to a broader class of functions. The next step is to introduce several properties of $I_t(H)$:
+linearity, additivity over intervals, adaptedness, and the martingale property.
+
+More importantly, the following two properties hold:
+\begin{enumerate}
+    \item Zero mean:
+    $$E\left(\int_0^T H_t\,\mathrm{d}B_t\right)=0.$$
+    \item Isometry: \label{pro2}
+    $$
+    \mathbb{E}\!\left[\left(\int_0^T H_t\,\mathrm{d}B_t\right)^2\right]
+    =\mathbb{E}\!\int_0^T |H_t|^2\,\mathrm{d}t.
+    $$
+\end{enumerate}
+The proofs are straightforward once one knows how to compute the expectation and variance of the normal distribution and handle independence, and are omitted here.
+
+\subsubsection{Itô Integral on $L^2_T$}
+To extend the Itô integral to a larger space, we define the space $L^2_T(\Omega)$:
+$$
+\begin{aligned}
+L^2_T(\Omega)
+=\Big\{&X=\{X_t\}_{0\le t\le T} : X(t,\omega)\ \text{measurable with respect to }\ \mathcal{B}(0,T)\otimes\mathcal{F}, \\
+& X_t\ \text{measurable with respect to }\ \mathcal{F}_t, \\
+& E\!\left(\int_0^T|X_t|^2\,\mathrm{d}t\right)<\infty\Big\}.
+\end{aligned}
+$$
+Some sources also require $X$ to be \textbf{progressively measurable}. Define the norm
+$$
+\|X\|_{L_T^2}=\sqrt{E\!\left(\int_0^T|X_t|^2\,\mathrm{d}t\right)}.
+$$
+This is similar to $L^2([0,T]\times\Omega)$. As expected, simple processes are included in $L^2_T(\Omega)$. One can show that $L^2_T(\Omega)$ is a \textbf{Banach} space. With the inner product
+$$
+\langle X,Y\rangle = \mathbb{E}\!\int_0^T X_tY_t\,\mathrm{d}t,
+$$
+$L_T^2$ becomes a \textbf{Hilbert} space. By standard arguments in analysis, simple processes are dense in $L^2_T(\Omega)$:
+
+\begin{theorem}
+For any stochastic process $X\in L^2_T(\Omega)$ and any $\epsilon>0$, there exists a simple process $H$ such that
+    $$
+    \|X-H\|_{L_T^2}<\epsilon.
+    $$
+\end{theorem}
+
+Sketch of proof in three steps:
+\begin{enumerate}
+    \item Assume $X(t,\omega)$ is continuous in $t$ and bounded. Use the dominated convergence theorem and continuity to prove density.
+    \item Assume $X(t,\omega)$ is bounded but not necessarily continuous.\label{2} To use the continuous case, apply \textbf{convolution} to smooth it. Choose a family of kernel functions $K_\lambda(t)$, and define
+    $$
+    (X*K_\lambda)(t)=\int_0^tK_\lambda(t-s)X(s)\,\mathrm{d}s.
+    $$
+    \item For general $X\in L_T^2$, truncate $X$ to obtain $X^{(n)}$, apply the result from \ref{2}, and then approximate $X$.
+\end{enumerate}
+
+Thus, by property \ref{pro2}, $I_t(H)$ is a linear isometry from $\{H\ \text{simple}:H\in L_T^2\}$ to $L^2(\Omega)$, and hence a bounded linear operator. If $H^{(n)}$ is a Cauchy sequence in $L_T^2$, then $I_t(H^{(n)})$ is a Cauchy sequence in $L^2(\Omega)$. Therefore, we can define the Itô integral on $L^2_T(\Omega)$:
+
+\begin{definition}
+For $X\in L^2_T(\Omega)$, there exists a sequence of simple processes $H^{(n)}$ such that $H^{(n)}\to X$ in the $L_T^2$ norm. Define the Itô integral of $X$ by
+    $$
+    \int_0^T X_s\,\mathrm{d}B_s=\lim_n\int_0^T H_t^{(n)}\,\mathrm{d}B_t,
+    $$
+where the limit is taken in the $L^2$ sense.
+\end{definition}
+
+The extended Itô integral still satisfies linearity, additivity over intervals, adaptedness, and the martingale property, as well as the following formulas:
+\begin{enumerate}
+    \item Zero mean:
+    $$E\!\left(\int_0^T X_t\,\mathrm{d}B_t\right)=0.$$
+    \item Isometry:
+    $$
+    E\!\left(\int_0^T X_t\,\mathrm{d}B_t\right)^2=\int_0^T E|X_t|^2\,\mathrm{d}t.
+    $$
+    \item Covariance formula:
+    $$
+    E\!\left(\int_0^T X_t\,\mathrm{d}B_t\int_0^T Y_t\,\mathrm{d}B_t\right)=\int_0^T E(X_tY_t)\,\mathrm{d}t.
+    $$
+\end{enumerate}
+These follow directly from the continuity of approximation by simple processes.
+
+\subsubsection{Quadratic Variation}
+Since Brownian motion paths are continuous everywhere but nowhere differentiable, they are not of bounded variation on $[0,T]$. However, they do have finite quadratic variation.
+
+\begin{lemma}[Quadratic Variation of Brownian Motion]
+    $$[B,B]_t=t.$$
+\end{lemma}
+
+This proof is straightforward. Motivated by this, we can define the quadratic covariation of any two processes on $[0,T]$. Let $t_0=0,t_N=T,\Delta=\max_n\{\Delta t_n\}$.
+
+\begin{definition}
+For processes $X,Y$, if the following limit converges in probability:
+    $$
+    \lim_{\Delta\to0}\sum_{n=0}^{N-1}(Y_{t_{n+1}}-Y_{t_{n}})(X_{t_{n+1}}-X_{t_{n}}),
+    $$
+then the limiting process is called the quadratic covariation of $X,Y$ on $[0,T]$, denoted by $[X,Y]_T$.
+\end{definition}
+
+If we take $X=B$ (Brownian motion) and $Y=t$ (a deterministic function), then
+$$
+\lim_{\Delta\to0}\sum_{n=1}^{N-1}(B_{t_{n+1}}-B_{t_{n}})(t_{n+1}-t_{n})=0.
+$$
+The limit converges in the $L^2$ norm, hence also in probability. In fact, the variance of the limit is of the same order as $\lim\sum_n(t_{n+1}-t_{n})^{3/2}$, i.e., order $1/2$.
+
+We are also interested in the quadratic variation of Itô integrals. On $[0,t],t\le T$, let
+$I_t=\{\int_0^t X_s\,\mathrm{d}B_s\}_{0\le t\le T}$ be viewed as a stochastic process. For simple processes, its quadratic variation is
+$$
+[I,I]_T=\lim\sum_{n=0}^{N-1}\Big(\int_{t_n}^{t_{n+1}}X_s\,\mathrm{d}B_s\Big)^2
+=\lim\sum_{n=0}^{N-1}X_n^2(B_{t_{n+1}}-B_{t_n})^2
+=\int_0^T|X_s|^2\,\mathrm{d}s.
+$$
+By approximating general processes with simple ones, the same expression is obtained. Again, convergence is in probability.
+
+\subsection{Itô’s Lemma and Examples}
+\subsubsection{Itô’s Formula for Brownian Motion}
+Assume $f$ is twice continuously differentiable; then $f(B_T)-f(B_0)$ can be expanded by \textbf{Taylor}. To handle this more precisely, partition $[0,T]$:
+$$
+\begin{aligned}
+    f(B_T)-f(B_0)
+    &=\sum_{n=1}^N\!\big(f(B_{t_n})-f(B_{t_{n-1}})\big).
+\end{aligned}
+$$
+Isolate one summand and apply the \textbf{Taylor} expansion; write $\Delta B_{{n-1}}=B_{t_n}-B_{t_{n-1}}$:
+$$
+f(B_{t_n})-f(B_{t_{n-1}})=f'(B_{t_{n-1}})\,\Delta B_{{n-1}}+\frac{1}{2}f''(\xi_{n})\big(\Delta B_{{n-1}}\big)^2,
+$$
+where $\xi_n=B_{t_{n-1}}+\theta\,\Delta B_{{n-1}},\ \theta\in(0,1)$. Hence,
+$$
+f(B_T)-f(B_0)=\sum_n f'(B_{t_{n-1}})\,\Delta B_{{n-1}}+\frac{1}{2}\sum_n f''(\xi_{n})\big(\Delta B_{{n-1}}\big)^2.
+$$
+The first term on the right converges in $L^2$ to the Itô integral $\int_0^T f'(B_t)\,\mathrm{d}B_t$; the second term converges \textbf{in probability} to $\frac{1}{2}\int_0^T f''(B_t)\,\mathrm{d}t$.
+
+\begin{theorem}
+Assume $f\in C^2$ and $E\!\int_0^T|f'(B_t)|^2\,\mathrm{d}t<\infty$, $E\!\int_0^T|f''(B_t)|^2\,\mathrm{d}t<\infty$. Then for any $T\ge0$,
+    $$
+    f(B_T)-f(B_0)=\int_0^T f'(B_t)\,\mathrm{d}B_t+\frac{1}{2}\int_0^T f''(B_t)\,\mathrm{d}t.
+    $$
+\end{theorem}
+\begin{proof}
+We only prove the second-order term $\int_0^T f''(B_t)\,\mathrm{d}t$. That is, we need to show
+$$
+\sum_n f''(\xi_{n})\big(\Delta B_{{n-1}}\big)^2
+\stackrel{P}{\longrightarrow}\int_0^T f''(B_t)\,\mathrm{d}t.
+$$
+\begin{enumerate}
+    \item First show
+    $$
+    \sum_n f''(\xi_{n})\big(\Delta B_{{n-1}}\big)^2\stackrel{\text{a.s.}}{\sim}\sum_n f''(B_{n-1})\big(\Delta B_{{n-1}}\big)^2,
+    $$
+    where $\sim$ means the difference of the two sides is infinitesimal in a certain sense ($L^2$, a.s., or in probability).
+    \item Then show
+    $$
+    \sum_n f''(B_{n-1})\big(\Delta B_{{n-1}}\big)^2\stackrel{L^2}{\sim}\sum_n f''(B_{n-1})\,\Delta t_{{n-1}}.
+    $$
+    \item Next, prove
+    $$
+    \sum_n f''(B_{n-1})\,\Delta t_{{n-1}}\stackrel{\text{a.s.}}{\longrightarrow}\int_0^T f''(B_t)\,\mathrm{d}t.
+    $$
+    \item Finally, note that convergence in $L^2$ or almost surely implies convergence in probability.
+\end{enumerate}
+\end{proof}
+
+\subsubsection{Itô Processes and Their Itô Formula}
+\begin{definition}[Itô Process]
+    \begin{equation}
+    X_t=X_0+\int_0^t \mu(s)\,\mathrm{d}s+\int_0^t \sigma(s)\,\mathrm{d}B_s
+    \label{ito pro}
+    \end{equation}
+    where $\mu,\sigma\in L^2_T(\Omega)$.
+\end{definition}
+
+Similarly, consider a $C^2$ function $u(t,x)$ in two variables, and examine the difference over $[t_n,t_{n+1}]$:
+$$
+\begin{aligned}
+    u(t_{n+1},X_{n+1})-u(t_{n},X_{n})
+    &=\partial_t u(t_{n},X_{n})\,\Delta t_n+\partial_x u(t_{n},X_{n})\,\Delta X_n\\
+    &\quad+\frac{1}{2}\partial_{xx}^2 u(\lambda_n,\xi_n)\,\big(\Delta X_n\big)^2\\
+    &\quad+\frac{1}{2}\partial_{tt}^2 u(\lambda_n,\xi_n)\,\big(\Delta t_n\big)^2\\
+    &\quad+\partial_{tx}^2 u(\lambda_n,\xi_n)\,\Delta t_n\,\Delta X_n,
+\end{aligned}
+$$
+where $(\lambda_n,\xi_n)=(t_n,X_n)+\theta(\Delta t_n,\Delta X_n)$ with $\theta\in(0,1)$. We find that the $\partial_{tx}^2$ and $\partial_{tt}^2$ terms should converge to $0$ in probability. Moreover, $\Delta X_n$ and $(\Delta X_n)^2$ are of interest. From the difference viewpoint, as $\Delta t_n\to0$ we heuristically have
+$$
+\Delta X_n=\int_{t_n}^{t_{n+1}}\mu(s)\,\mathrm{d}s+\int_{t_n}^{t_{n+1}}\sigma(s)\,\mathrm{d}B_s
+\approx \mu_n\,\Delta t_n+\sigma_n\,\Delta B_n,
+$$
+where $\mu_n,\sigma_n$ abbreviate $\mu(t_n),\sigma(t_n)$. For the quadratic term,
+$$
+(\Delta X_n)^2
+\approx \mu_n^2(\Delta t_n)^2+\sigma_n^2(\Delta B_n)^2+\mu_n\sigma_n\,\Delta t_n\,\Delta B_n.
+$$
+To clarify the picture, ignore the higher-order terms $(\Delta t_n)^2$ and $\Delta t_n\Delta B_n$, which vanish in the limit. Thus,
+$$
+\begin{aligned}
+    \Delta u(t_n,X_n)
+    &\approx\big(\partial_t+\mu_n\partial_x\big)u(t_{n},X_{n})\,\Delta t_n\\ 
+    &\quad+\frac{1}{2}\sigma_n^2\,\partial_{xx}^2 u(\lambda_{n},\xi_{n})\,(\Delta B_n)^2\\
+    &\quad+\partial_x u(t_{n},X_{n})\,\Delta B_n.
+\end{aligned}
+$$
+
+\begin{theorem}[Itô’s Formula for Itô Processes]
+    $$
+    \begin{aligned}
+    u(T,X_T)
+    &=u(0,X_0)+\int_0^T \partial_t u(s,X_s)\,\mathrm{d}s+\int_0^T \partial_x u(s,X_s)\,\mathrm{d}X_s+\frac{1}{2}\int_0^T \partial^2_{xx}u(s,X_s)\,(\mathrm{d}X_s)^2\\
+    &=u(0,X_0)+\int_0^T\!\Big(\partial_t u(s,X_s)+\mu(s)\partial_x u(s,X_s)+\tfrac{1}{2}\sigma^2(s)\partial^2_{xx}u(s,X_s)\Big)\mathrm{d}s\\
+    &\quad+\int_0^T \sigma(s)\,\partial_x u(s,X_s)\,\mathrm{d}B_s\label{ito formula}
+    \end{aligned}
+    $$
+\end{theorem}
+
+The second equality has already been clarified by the discussion above; the key point is the first equality, which defines stochastic integrals with respect to $X_t$ and its quadratic variation. If we ignore the first term in \eqref{ito pro}, i.e., the one with $\mu_s$, then $X_t$ is a stochastic integral with respect to Brownian motion. The term $\mu$ is commonly called the drift. By properties of the Itô integral, this yields a martingale. Since $\sigma_s\in L^2_T$, it is a \textbf{square-integrable martingale}.
+
+\begin{definition}
+A process $X$ on $[0,T]$ is called a square-integrable martingale if it is a martingale and
+    $$
+    \sup_{t\le T} E|X_t|^2<+\infty.
+    $$
+\end{definition}
+
+Consider first the case $\mu_s=0$, i.e., $X_t=\int_0^t \sigma(s)\,\mathrm{d}B_s$. Its quadratic variation is $[X,X]_t=\int_0^t|\sigma_s|^2\,\mathrm{d}s$, abbreviated $[X]_t$. It is easy to see that this process has sample paths that are monotonically increasing; moreover, it is continuous with bounded variation. We call such a process a \textbf{nondecreasing process}.
+
+\begin{definition}[Nondecreasing Process]
+A process $F$ on $[0,T]$ is called nondecreasing if its sample paths are almost surely nondecreasing and right-continuous.
+\end{definition}
+
+For a nondecreasing process, one can define the Riemann–Stieltjes integral on each path. The following limit converges a.s.:
+$$
+\lim_{\Delta\to0}\sum_n g(\xi_n,\omega)\,\Delta F_n(\omega),
+$$
+provided the process $g$ satisfies suitable conditions. We denote the limit by $\int_0^T g_t\,\mathrm{d}F_t$. In our discussion limited to Itô’s formula \eqref{ito formula}, take $g=\sigma^2$ and $F_t=[X]_t=\int_0^t \sigma_t^{2}\,\mathrm{d}t$. Since such an integral exists, we also consider its differential, denoted $\mathrm{d}[X]_t$, or heuristically $(\mathrm{d}X_t)^2$. Formally, $\mathrm{d}[X]_t=\sigma_t^2\,\mathrm{d}t$. That is, we need to verify
+$$
+\int_0^T Y_t\,\mathrm{d}[X]_t=
+\int_0^T Y_t\,\sigma_t^2\,\mathrm{d}t
+$$
+for any integrable $Y_t$. The proof is straightforward and omitted.
+
+On the other hand, note that $X$ has continuous sample paths. Analogously to the Itô integral, we can define stochastic integrals with respect to continuous square-integrable martingales. Let $M$ denote such a process. Define the process space
+$$
+\begin{aligned}
+\mathcal{M}^2_T(\Omega)
+=\Big\{&Y=\{Y_t\}_{0\le t\le T}: Y(t,\omega)\ \text{measurable with respect to }\ \mathcal{B}(0,T)\otimes\mathcal{F},\\
+& Y_t\ \text{measurable with respect to }\ \mathcal{F}_t,\\
+& E\!\Big(\int_0^T |Y_t|^2\,\mathrm{d}[M]_t\Big)<\infty\Big\},
+\end{aligned}
+$$
+with $Y$ progressively measurable. The construction details are analogous to those for the Itô integral. When $M_t=X_t=\int_0^t \sigma_s\,\mathrm{d}B_s$, it is easy to show
+$$
+\int_0^T Y_t\,\mathrm{d}X_t=\int_0^T Y_t\,\sigma_t\,\mathrm{d}B_t.
+$$
+
+When the drift is nonzero, $X$ need not be a square-integrable martingale, or even a martingale at all. But $\int_0^t \mu_s\,\mathrm{d}s$ is certainly a \textbf{bounded-variation process}, i.e., a process with right-continuous paths of bounded variation. Hence $X$ can be written as the sum of a bounded-variation process and a martingale, commonly called a semimartingale. One can then define stochastic integrals with respect to semimartingales, but we will not elaborate here. It suffices to note that
+$$
+\int_0^T Y_t\,\mathrm{d}X_t=\int_0^T Y_t\,\mu_t\,\mathrm{d}t+\int_0^T Y_t\,\sigma_t\,\mathrm{d}B_t.
+$$
+
+\section{Basic Solution Methods for SDEs}
+\subsection{Itô Integral Equation Form}
+$$
+X_t=X_s+\int_s^t a(u,X_u)\,\mathrm{d}u+\int_s^t b(u,X_u)\,\mathrm{d}B_u
+$$
+
+\subsection{Euler--Maruyama Discretization Method}
+The stochastic differential equation
+\begin{equation}
+    \mathrm{d}X_t=a(X_t)\,\mathrm{d}t+b(X_t)\,\mathrm{d}B_t\label{eq1}
+\end{equation}
+
+Itô formula:
+$$
+    \mathrm{d}f(X_t)=f'(X_t)\,\mathrm{d}X_t+\frac{1}{2}f''(X_t)\,(\mathrm{d}X_t)^2
+$$
+with $(\mathrm{d}X_t)^2=b^2(X_t)\,\mathrm{d}t$.
+Furthermore,
+\begin{equation}
+    \mathrm{d}f(X_t)=\left(a(X_t)f'(X_t)+\frac{1}{2}b^2(X_t)f''(X_t)\right)\mathrm{d}t+f'(X_t)b(X_t)\,\mathrm{d}B_t
+\label{eq2}\end{equation}
+The full integral form of \ref{eq1} is
+$$\begin{aligned}
+    X_t-X_s
+    &=\int_s^t a(X_\tau)\,\mathrm{d}\tau+\int_s^t b(X_\tau)\,\mathrm{d}B_\tau.
+    \end{aligned}
+$$
+Let $s=t_{n},\ t=t_{n+1}$, then
+\begin{equation}
+    \begin{aligned}
+        X_{t_{n+1}}-X_{t_n}
+        &=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}\\
+        &\quad+\int_{t_{n}}^{t_{n+1}}\!\big[a(X_\tau)-a(X_{t_{n}})\big]\,\mathrm{d}\tau
+        +\int_{t_{n}}^{t_{n+1}}\!\big[b(X_\tau)-b(X_{t_{n}})\big]\,\mathrm{d}B_\tau
+    \end{aligned}\label{eq3}
+\end{equation}
+
+Apply \ref{eq2} to $a(X_\tau)-a(X_{t_{n}})$ and $b(X_\tau)-b(X_{t_{n}})$. Of course, $a,b$ need to satisfy smoothness conditions. Write the operators $L_1f(x)=a(x)f'(x)+\frac{1}{2}b(x)f''(x)$ and $L_2f(x)=b(x)f'(x)$. The two formulas above can be written as
+\begin{equation}\label{eq6}
+a(X_\tau)-a(X_{t_{n}})=\int_{t_n}^\tau L_1 a(X_s)\,\mathrm{d}s+\int_{t_n}^\tau L_2 a(X_s)\,\mathrm{d}B_s
+\end{equation}
+\begin{equation}\label{eq7}
+b(X_\tau)-b(X_{t_{n}})=\int_{t_n}^\tau L_1 b(X_s)\,\mathrm{d}s+\int_{t_n}^\tau L_2 b(X_s)\,\mathrm{d}B_s
+\end{equation}
+It is not hard to see that $L_1,L_2$ are both linear. Let the sum of the last two terms in \ref{eq3} be $R$, then
+\begin{equation}\begin{aligned}
+R(N,X)
+&=\int_{t_n}^{t_{n+1}}\!\mathrm{d}\tau\int_{t_n}^\tau L_1 a(X_s)\,\mathrm{d}s+
+\int_{t_n}^{t_{n+1}}\!\mathrm{d}\tau\int_{t_n}^\tau L_2 a(X_s)\,\mathrm{d}B_s\\
+&\quad+\int_{t_n}^{t_{n+1}}\!\mathrm{d}B_\tau\int_{t_n}^\tau L_1 b(X_s)\,\mathrm{d}s
++\int_{t_n}^{t_{n+1}}\!\mathrm{d}B_\tau\int_{t_n}^\tau L_2 b(X_s)\,\mathrm{d}B_s
+\end{aligned}\label{eq8}\end{equation}
+We may regard the term $R$ as an error term. Then \ref{eq3} can be abbreviated as
+\begin{equation}
+    \Delta X_{t_n}=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}+R(N,X)\label{eq4}
+\end{equation}
+By analogy with converting an \textbf{ODE} to a difference equation, to numerically solve \ref{eq1} we may consider its difference form
+$$
+    \Delta X_{t_n}=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}.
+$$
+Notice that if $R(N,X)=0$ in \ref{eq4}, then it has exactly the \textbf{difference} form. Thus $R(N,X)$ can be viewed as an error term. As long as $R(N,X)\to0$ when $\Delta\to0$, then under certain conditions (e.g., \textbf{Lipschitz} conditions on $a,b$), the solution of the difference equation may gradually approach the true solution. In fact, this is the \textbf{Euler–Maruyama scheme}:
+\begin{equation}
+    \bar{X}_{t_{n+1}}=\bar{X}_{t_n}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}\label{em}
+\end{equation}
+In practice, the first two conditions are used to control inequalities during the proof. Earlier, when discussing the \textbf{EM scheme}, we considered an equal partition of $[0,T]$. Here we generalize and allow a general partition, and denote $\delta=\max_n|\Delta_n|$.
+
+Since $R(N,X)$ is an error term, we should estimate its order. Assume an equal partition of $[0,T]$, i.e., $\Delta t_n=\Delta=T/N$. Then
+$$
+\int_{t_n}^{t_{n+1}}\!\mathrm{d}\tau\int_{t_n}^\tau L_1 a(X_s)\,\mathrm{d}s\approx
+\int_{t_n}^{t_{n+1}}\!\mathrm{d}\tau\int_{t_n}^\tau L_1 a(X_{t_n})\,\mathrm{d}s\approx
+\frac{1}{2}L_1 a(X_{t_n})\,\Delta^2,
+$$
+and similarly
+\begin{equation}
+\int_{t_n}^{t_{n+1}}\!\mathrm{d}\tau\int_{t_n}^\tau L_2 a(X_s)\,\mathrm{d}B_s\approx
+\frac{1}{2}L_1 a(X_{t_n})\,\Delta^{3/2}
+\label{eq5}\end{equation}
+$$
+\int_{t_n}^{t_{n+1}}\!\mathrm{d}B_\tau\int_{t_n}^\tau L_1 b(X_s)\,\mathrm{d}s\approx
+\frac{1}{2}L_1 b(X_{t_n})\,\Delta^{3/2},
+$$
+$$
+\int_{t_n}^{t_{n+1}}\!\mathrm{d}B_\tau\int_{t_n}^\tau L_2 b(X_s)\,\mathrm{d}B_s\approx
+\frac{1}{2}L_2 b(X_{t_n})\,(B_\Delta^2-\Delta)\approx
+\frac{1}{2}L_2 b(X_{t_n})\,\Delta.
+$$
+See details in \ref{AppendixA}. Note that the leading term among the orders above is $O(\Delta)$, corresponding to the term $\int\mathrm{d}B_\tau\int\mathrm{d}B_s$. Although the \textbf{E–M scheme} is simple in form, its convergence is somewhat weaker. To improve the convergence of the \textbf{E–M scheme}, keeping the $O(\Delta)$ term yields the \textbf{Milstein scheme}.
+
+\subsection{Milstein Scheme}
+$$
+\bar{X}_{t_{n+1}}=\bar{X_{t_n}}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}+\frac{1}{2}L_2 b(X_{t_n})\,(B_\Delta^2-\Delta)    
+$$
+
+\subsubsection{Higher Order}
+Recall how we obtained the \textbf{Milstein scheme}: apply \ref{eq6} and \ref{eq7} to \ref{eq3}. This resembles a \textbf{Taylor expansion}. Continuing to expand \ref{eq8} using \ref{eq6} and \ref{eq7} and then neglecting higher-order terms, we obtain
+$$\begin{aligned}
+R(\Delta,X)
+&=\sum_{i_1,i_2}L_{i_1}a_{i_1}(X_{t_n})\,\Delta_{i_1,i_2}\\
+&\quad+\sum_{i_1,i_2,i_3}\int_{t_n}^{t_{n+1}}\!\int_{t_n}^{s_1}\!\int_{t_n}^{s_2}
+L_{i_1}L_{i_2}a_{i_3}(X_{s_3})\,\mathrm{d}B_{s_1}^{i_1}\mathrm{d}B_{s_2}^{i_2}\mathrm{d}B_{s_3}^{i_3}
+\end{aligned}$$
+where $i_1,i_2,i_3=0,1$, $a_1,a_2=a,b$, and $\Delta_{i_1,i_2}=\int_{t_n}^{t_{n+1}}\int_{t_n}^{s_1}\mathrm{d}B_{s_1}^{i_1}\mathrm{d}B_{s_2}^{i_2}$.
+Moreover,
+$$
+\mathrm{d}B_{s_j}^{i_j}=\begin{cases}
+\mathrm{d}s_j,& i_j=0,\\
+\mathrm{d}B_{s_j},& i_j=1,
+\end{cases}
+\qquad j=1,2,3.
+$$
+Thus we obtain a higher-order \textbf{E–M scheme}:
+$$
+\begin{aligned}
+    \bar{X}_{t_{n+1}}
+    &=\bar{X}_{t_n}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}\\
+    &\quad+\sum_{i_1,i_2}L_{i_1}a_{i_1}(\bar{X}_{t_n})\,\Delta_{i_1,i_2}.
+\end{aligned}
+$$
+
+\subsubsection{First-Order Derivative-Free Schemes}
+Note that in the \textbf{Milstein scheme} the term $L_2 b(X_{t_n})$ involves derivatives. The goal here is to avoid derivatives. Since $L_2 b(X_{t_n})=b\,b'(X_{t_n})$, consider
+$$
+\tilde{X}_{t_{n+1}}=X_{t_n}+a(X_{t_n})\Delta+b(X_{t_n})\sqrt{\Delta}.
+$$
+The reason for this form is a crude but practical estimate: $\Delta B_{t_n}\approx\sqrt{\Delta t_{n}}$.
+Using an ordinary (non-stochastic) Taylor expansion, we see that
+$$
+\frac{1}{\sqrt{\Delta}}\big(b(\tilde{X}_{t_{n+1}})-b({X}_{t_{n+1}})\big)
+$$
+approximates $b\,b'(X_{t_n})$. Therefore, we obtain the \textbf{first-order derivative-free schemes}:
+$$
+\bar{X}_{t_{n+1}}=\bar{X_{t_n}}+a(\bar{X}_{t_{n}})\Delta_n+b(\bar{X}_{t_{n}})\Delta B_{t_n}
++\frac{1}{2}\frac{1}{\sqrt{\Delta}}\big(b(\tilde{X}_{t_{n+1}})-b({X}_{t_{n+1}})\big)\,(B_\Delta^2-\Delta).
+$$
+
+\subsection{Convergence}
+\subsubsection{Strong vs. Weak Convergence}
+Definitions
+$$
+\epsilon_{t}(\delta)=\sup_{0\leq s\leq t}E|\bar{X}_{s}^{\delta}-X_{s}|
+$$
+$$
+r_{t}(\delta)=\sup_{0\le s\le t}\left|E(\phi(\bar{X}_{s}^{\delta}))-E(\phi_{s}({X}_{s}))\right|
+$$
+where $\phi\in C_b^\infty$, i.e., a bounded smooth function whose derivatives of all orders are bounded. $\epsilon_{t}^{\delta}, r_{t}^{\delta}$ give rise to the notions of strong and weak convergence, respectively.
+\begin{definition}[Strong convergence]
+    If there exist $\alpha,\delta_0,C>0$ such that for any $0<\delta<\delta_0$,
+    $$
+    \epsilon_{t}(\delta)\le C\delta^\alpha,
+    $$
+    then $\bar{X}^\delta$ is said to converge strongly to $X$ with order $\alpha$.
+\end{definition}
+
+\begin{definition}[Weak convergence]
+    If there exist $\alpha,\delta_0,C>0$ such that for any $0<\delta<\delta_0$,
+    $$
+    r_{t}(\delta)\le C\delta^\alpha,\ \forall\phi\in C_b^\infty,
+    $$
+    then $\bar{X}^\delta$ is said to converge weakly to $X$.
+\end{definition}
+Below we only prove the half-order strong convergence and first-order weak convergence of the \textbf{Euler–Maruyama scheme}.
+
+\subsubsection{Strong Convergence of the EM Scheme}
+To discuss convergence, we need to strengthen some assumptions. Since symbols were not specified in detail earlier, we now give explicit statements.
+\begin{itemize}\label{conditions}
+    \item Condition 1 (Lipschitz): $a(t,x),b(t,x)$ are \textbf{Lipschitz} in the second variable, i.e.,
+    $$|a(t,x)-a(t,y)|\le L|x-y|.$$
+    \item Condition 2 (linear growth): $a,b$ satisfy a linear growth condition in the second variable, i.e.,
+    $$|a(t,x)|^2+|b(t,x)|^2\le C(1+|x|^2).$$
+    \item Condition 3 ($L^2$): $a,b$ are in $L^2$.
+    \item Condition 4 (initial value): $X_0$ is $\mathcal{F}_0$-measurable and is in $L^2$ ($E(||^2)<\infty$).
+\end{itemize}
+See \ref{appendixB} for detailed statements. The above four conditions are typically necessary, and what follows assumes these conditions hold. We will not repeat them later.
+
+\subsubsection{Weak Convergence of the EM Scheme}
+Before weak convergence, we introduce the stochastic solution of a parabolic operator, which will be used in the proof of weak convergence.
+\begin{definition}[Parabolic operator]
+    $$
+    \partial_t+\mathcal{L}=\partial_t+a\partial_x+\frac{1}{2}b^2\partial_x^2.
+    $$
+\end{definition}
+
+\begin{definition}[Terminal-value parabolic PDE (deterministic)]
+Assume $g$ is bounded:
+    $$
+    \begin{cases}
+        \partial_tu+\mathcal{L}u+gu=0,&\\
+        u(T,x)=f(x),&
+    \end{cases}
+    \qquad
+    u:[0,T]\times\mathbb{R}\label{parabolic}
+    $$
+\end{definition}
+
+\begin{lemma}
+The stochastic solution to \ref{diffeq} is
+    $$
+    u(t,x)=E\left(f(X_T)\exp\left(\int_s^Tg(X_u)\,\mathrm{d}u\right)\Bigg|X_s=x\right),
+    $$
+    where $X_t$ is $It\hat{o}$.
+\end{lemma}
+Let $C_P^{l}$ denote the space of $2l$-times continuously differentiable functions with polynomial growth. Polynomial growth means that for any $k\le l$ there exist $C,p$ such that
+$$
+|\partial_x^k u|\le C(1+|x|^{2p}).
+$$
+To make the proof work, we need two lemmas.
+
+\begin{lemma}
+    Assume $a,b,f\in C_P^{2l}$ and all derivatives of $a,b$ are uniformly bounded. Then $u\in C_P^{2l}$ and $u$ satisfies the differential equation \ref{parabolic}.
+\end{lemma}
+
+\begin{lemma}
+Let $\{Y_n\}_{n=0}^{n_T}$ be the sequence generated by the \textbf{EM scheme} \ref{em}. Assume $E(|X_0|^{2l})=E(|Y_0|^{2l})<\infty$. Then the following moment estimate holds:
+    $$\sup_n E(|Y_{n}|^{2l})<\infty.$$
+\end{lemma}
+In fact, this follows by proving the inequality
+$$
+E(|Y_{n+1}|^{2l})\le K_1E(|Y_{n}|^{2l})+K_2\left((\Delta t_n)^{2l}+(\Delta t_n)^{l}\right).
+$$
+(BTW, general SDEs admit similar moment estimates.)
+
+The core of the theorem’s proof is to use the \textbf{Gronwall} inequality and the $It\hat{o}$ formula. We now state the detailed result of the first-order weak convergence of the \textbf{EM scheme}.
+
+\begin{theorem}[First-order weak convergence of the EM scheme]
+    Suppose $a,b,f\in C_P^{2l}$ and all their derivatives are uniformly bounded. Then the \textbf{EM scheme} \ref{em} converges weakly to the true solution with order $1$.
+\end{theorem}
+See \ref{B2} for details.
+
+\subsection{Ornstein--Uhlenbeck Process}
+
+The Ornstein--Uhlenbeck (OU) process is the classic mean-reverting model: the state fluctuates under noise but is pulled back toward a long-term mean $\mu$. Its one-dimensional SDE is
+\begin{equation}\label{eq:OU}
+  \mathrm{d}X_t=\theta(\mu-X_t)\,\mathrm{d}t+\sigma\,\mathrm{d}B_t,
+  \qquad \theta>0,\ \sigma>0,
+\end{equation}
+where $\theta$ is the rate of mean reversion, $\mu$ is the long-term mean, and $\sigma$ is the diffusion intensity. This model is equivalent to the Langevin equation in physics under a linear friction potential and is also the unique stationary Gaussian Markov process with an exponential autocovariance kernel. Multiplying \eqref{eq:OU} by the integrating factor $e^{\theta t}$ and integrating yields the explicit solution
+\[
+  X_t=\mu + (X_s-\mu)e^{-\theta (t-s)}+\sigma\!\int_s^t e^{-\theta (t-u)}\,\mathrm{d}B_u,
+\]
+so that, conditional on $X_s=x$, $X_t$ is normally distributed:
+\[
+  \mathbb{E}[X_t\mid X_s=x] = \mu + (x-\mu)e^{-\theta\Delta},\qquad
+  \operatorname{Var}(X_t\mid X_s=x) = \frac{\sigma^2}{2\theta}\bigl(1-e^{-2\theta\Delta}\bigr),\quad \Delta=t-s.
+\]
+Thus the transition law is
+\[
+  X_t\mid X_s=x \sim \mathcal{N}\!\left(\mu+(x-\mu)e^{-\theta\Delta},\ \frac{\sigma^2}{2\theta}(1-e^{-2\theta\Delta})\right).
+\]
+If we take the initial value $X_0\sim \mathcal{N}(\mu,\ \sigma^2/(2\theta))$, then $X_t$ is stationary with $\mathbb{E}[X_t]=\mu$, variance $\sigma^2/(2\theta)$, and autocovariance
+\[
+  \operatorname{Cov}(X_t,X_{t+\tau})=\frac{\sigma^2}{2\theta}\,e^{-\theta \tau},\qquad \rho(\tau)=e^{-\theta \tau}.
+\]
+Hence OU is a Gaussian, Markov, stationary process with exponential autocorrelation, whose unique stationary distribution is $\mathcal{N}(\mu,\sigma^2/(2\theta))$. The infinitesimal generator of OU is
+\[
+  \mathcal{L}\varphi(x)=\theta(\mu-x)\varphi'(x)+\tfrac{\sigma^2}{2}\varphi''(x),
+\]
+and the Fokker--Planck equation is
+\[
+  \partial_t p = -\partial_x\!\big(\theta(\mu-x)p\big)+\tfrac{\sigma^2}{2}\,\partial_{xx}^2 p,
+\]
+whose unique stationary solution is exactly the normal distribution above. Since the OU equation is linear and solvable, it admits an exact discretization for any step size $\Delta$:
+\[
+  X_{t+\Delta}=\mu+(X_t-\mu)e^{-\theta\Delta}
+  +\sigma\,\sqrt{\tfrac{1-e^{-2\theta\Delta}}{2\theta}}\;Z,\qquad Z\sim\mathcal{N}(0,1),
+\]
+which coincides with the AR(1) form and is thus commonly used for parameter estimation and simulation. In contrast, the Euler–Maruyama discretization
+\[
+  X_{n+1}^{\text{EM}}=X_n+\theta(\mu-X_n)\Delta+\sigma\sqrt{\Delta}\,Z_n
+\]
+is only a strong order-$1/2$ approximation, and exhibits more bias for large step sizes or strong mean reversion. Finally, by Itô’s formula the moment equations close: the mean satisfies $m'(t)=\theta(\mu-m(t))$ with solution $m(t)=\mu+(m(0)-\mu)e^{-\theta t}$; the variance satisfies $v'(t)=-2\theta v(t)+\sigma^2$, and if $X_0$ is deterministic then $v(t)=\frac{\sigma^2}{2\theta}(1-e^{-2\theta t})$.
+
+\appendix
+\section{Rough Order Estimates\label{AppendixA}}
+The estimate in \ref{eq5} is slightly more involved. Simply put, it amounts to estimating $\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau\mathrm{d}B_s$. In fact, this reduces to estimating
+$$
+D_\Delta=\int_{0}^{\Delta} B_t\mathrm{d}t
+$$
+where $I_\Delta$ is an $It\hat{o}$ process. It is easy to obtain $E(I_\Delta)=0$. Applying the $It\hat{o}$ formula, we have
+$$\begin{aligned}
+I_\Delta^2
+&=2\int_0^\Delta\int_0^tB_uB_t\mathrm{d}u\mathrm{d}t\\
+&=2\int^\Delta_0\int_0^t B_u(B_t-B_u)\mathrm{d}u\mathrm{d}t+2\int^\Delta_0\int_0^t B_u^2\mathrm{d}u\mathrm{d}t
+\end{aligned}$$
+Therefore
+$$
+E(I_\Delta^2)=2\int^\Delta_0\int_0^t E(B_u^2)\mathrm{d}u\mathrm{d}t=\Delta^3/3
+$$
+Alternatively, using stochastic integration by parts,
+$$
+\int_0^\Delta B_t\mathrm{d}t+\int_0^\Delta t\mathrm{d}B_t=\Delta B_\Delta
+$$
+hence
+$$
+I_\Delta^2=\Delta^2B_T^2+(\int_0^\Delta t\mathrm{d}B_t)^2-2\Delta\int_o^\Delta\mathrm{d}B_t\int_0^\Delta t\mathrm{d}B_t
+$$
+so $E(I_\Delta^2)=\Delta^3+\Delta^3/3-\Delta^3$. The last two terms use properties of $It\hat{o}$ integrals.
+Moreover,
+$$
+\int_0^\Delta\int_0^t\mathrm{d}B_s\mathrm{d}B_t=\int_0^\Delta B_t\mathrm{d}B_t=\frac{1}{2}(B_\Delta^2-\Delta)
+$$
+One can remember several rough but very practical estimates: $\mathrm{d}B_t\approx\sqrt{\mathrm{d}t},\ \mathrm{d}t\,\mathrm{d}B_t\approx0,\ (\mathrm{d}B_t)^2\approx\mathrm{d}t$. Here “$\approx0$” holds in the sense of neglecting higher-order terms, and the third is an observation about \textbf{quadratic variation}.
+
+\section{Details of the EM-Scheme Convergence Proof\label{appendixB}}
+\subsection{Strong Convergence}
+All prerequisites are in \ref{conditions}.
+$$
+\begin{aligned}
+E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}
+&=E\left|\sum_{n=0}^{n_{s}-1}\Delta\bar{X}_{t_n}^{\delta}-\int_{0}^{s}a\left(\tau,X_{\tau}\right)\mathrm{d}\tau-\int_{0}^{s}b\left(\tau,X_{\tau}\right)dW_{\tau}\right|^2 \\
+&=E\Bigg|\int_{0}^{s}\left(a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right)\mathrm{d}\tau+\int_{0}^{s}\left(b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right)\mathrm{d}B_{\tau}\\
+&+\int_{n_{s}}^{s}a(\tau,X_{\tau})\mathrm{d}\tau+\int_{n_{s}}^{s}b(\tau,X_{\tau})\mathrm{d}B_{\tau}\Bigg|^{2} \\
+&\le C\Bigg\{
+E\left|\int_{0}^{s}\left(a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right)\mathrm{d}\tau\right|^2\\
+&+E\left|\int_{0}^{s}\left(b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right)\mathrm{d}B_\tau\right|^2\\
+&+E\Bigg|\int_{n_{s}}^{s}a(\tau,X_{\tau})\mathrm{d}\tau\Bigg|^{2} +E\Bigg|\int_{n_{s}}^{s}b(\tau,X_{\tau})\mathrm{d}B_{\tau}\Bigg|^{2} 
+\Bigg\}
+\end{aligned}
+$$
+Also,
+$$\begin{aligned}
+E\left|\int_{0}^{s}\left(a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right)\mathrm{d}\tau\right|^2
+&\le sE\int_0^s\left|a(\tau,\bar{X}_{n_\tau}^{\delta})-a(\tau,X_{\tau})\right|^2\mathrm{d}\tau\\
+&\le
+s\int_0^sE\left|\bar{X}_{n_\tau}^{\delta}-X_{\tau}\right|^2\mathrm{d}\tau
+\end{aligned}$$
+
+$$\begin{aligned}
+E\left|\int_{0}^{s}\left(b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right)\mathrm{d}B_\tau\right|^2
+&=
+E\int_0^s\left|b(\tau,\bar{X}_{n_\tau}^{\delta})-b(\tau,X_{\tau})\right|^2\mathrm{d}\tau\\
+&\le
+\int_0^sE\left|\bar{X}_{n_\tau}^{\delta}-X_{\tau}\right|^2\mathrm{d}\tau
+\end{aligned}$$
+
+$$\begin{aligned}
+E\Bigg|\int_{n_{s}}^{s}a(\tau,X_{\tau})\mathrm{d}\tau\Bigg|^{2} +E\Bigg|\int_{n_{s}}^{s}b(\tau,X_{\tau})\mathrm{d}B_{\tau}\Bigg|^{2}
+&\le(s-n_s)\left\{
+E\int_{n_{s}}^{s}\left|a(\tau,X_{\tau})\right|^2+\left|b(\tau,X_{\tau})\right|^2\mathrm{d}\tau\right\}\\
+&\le2(s-n_s)\left\{
+E\int_{n_{s}}^{s}1+\left|X_{\tau}\right|^2\mathrm{d}\tau\right\}
+\end{aligned}$$
+Now, collecting the infinitesimal terms and neglecting higher-order terms, we have:
+$$
+E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}
+\le
+C_1\int_0^sE\left|\bar{X}_{n_\tau}^{\delta}-X_{\tau}\right|^2\mathrm{d}\tau
++C_2(s-n_s)
+$$
+By the \textbf{GronWall} inequality, we must have
+$$
+E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}
+\le
+C_2(s-n_s)
++
+C_1\int_0^s
+(\tau-n_\tau)e^{C_1(s-\tau)}
+\mathrm{d}\tau
+,\forall 0\le s\le T
+$$
+In the above, the integral term is in fact higher order. Neglecting higher-order terms yields
+$\sup_{0\le s\le T} E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}\le C\delta$. Hence
+$$
+\epsilon_{T}(\delta)
+\le
+\sqrt{\sup_{0\le s\le T} E\left|\bar{X}_{n_{s}}^{\delta}-X_{s}\right|^{2}}\le C\delta^{1/2},
+$$
+which proves the half-order strong convergence of the \textbf{EM-Scheme}.
+
+\subsection{Weak Convergence\label{B2}}
+For convenience, we simplify notation: $Y_n$ denotes the random variable generated by the \textbf{EM scheme} at time $t_{n}$, and $B_n=B_{_{t_n}}$.
+Since $f\in C_P^{2l}$, consider the terminal-value PDE
+$$
+\begin{cases}
+        \partial_tu+\mathcal{L}u=0&\\
+        u(T,x)=f(x)&\\
+    \end{cases}
+    \qquad u\in C^2_P([0,T]\times\mathbb{R}\label{diffeq})
+$$
+Then
+$$
+u(t,x)=E(f(X_T)\mid X_t=x).
+$$
+Therefore,
+$$
+\begin{aligned}
+E(f(Y_{T}))-E(f(X_T))
+&=E(u(T,Y_T))-E(u(0,Y_0))\\
+&= E \left( \sum_{n=0}^{n_T-1} \left( u(t_{n+1}, Y_{n+1}) - u(t_n, Y_{n}) \right) \right)\\
+&= E \left( \sum_{n=0}^{n_T-1} \left( u(t_{n+1}, Y_{n+1}) - u(t_n, Y_{n}) \right) \right).
+\end{aligned}
+$$
+Let $\Delta u(t_n,Y_n)= u(t_{n+1}, Y_{n+1}) - u(t_{n}, Y_{n})$.
+Using a Taylor expansion,
+\begin{equation}\begin{aligned}
+\Delta u(t_n,Y_n)
+&=\sum_{k=1}^3\frac{1}{k!}\left\{\Delta t_n(\partial_t+a\partial_x)+\Delta B_n\,b\partial_x\right\}^k u(t_n,Y_n)+R_n(Y_{n+1})\\
+&=A(Y_n)+R_n(Y_{n+1})
+\label{weak taylor}
+\end{aligned}\end{equation}
+$$
+R_n(Y_{n+1})=\frac{1}{4!}\left\{\Delta t_n(\partial_t+a\partial_x)+\Delta B_n\,b\partial_x\right\}^4u(\tau_n,\xi_n),\ \theta\in(0,1).
+$$
+By a judicious use of conditional expectation, the odd powers in $\Delta B_n$ in \ref{weak taylor} vanish:
+$$
+|E(\Delta u(t_n,Y_n))|
+\le
+\big|E\{E(A(Y_n)\mid\mathcal{F}_n)\}\big|+E|R_n(Y_{n+1})|.
+$$
+Now $E(A(Y_n)\mid\mathcal{F}_n)$ contains no $\Delta B_n$ terms (nor their higher powers), but only powers of $\Delta t_n$. The first-order term is exactly
+$$
+(\partial_t+\mathcal{L})u(t_n,Y_n)\,\Delta t_n=0.
+$$
+Moreover, the lowest-order term in $E|R_n(Y_{n+1})|$ is $(\Delta t_n)^2$. Hence
+$$
+|E(\Delta u(t_n,Y_n))|\le(\Delta t_n)^2 E\!\big(K(a,b,u)\big)+O\!\big((\Delta t_n)^2\big),
+$$
+where $K(a,b,u)$ denotes combinations of $a,b,u$ and derivatives of $u$. By the theorem’s assumptions, $E(K(a,b,u))$ is bounded. Therefore,
+$$
+\sum_{n=0}^{n_T-1}|E(\Delta u(t_n,Y_n))|\le C\,\Delta t_n,
+$$
+which completes the proof: the \textbf{EM scheme} has first-order weak convergence.
+
+
+\end{CJK*}
+\end{document}

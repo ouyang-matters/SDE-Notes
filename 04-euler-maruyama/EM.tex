@@ -1,0 +1,208 @@
+\documentclass{article}
+\usepackage{CJKutf8}
+\usepackage{graphicx}
+\usepackage{math_blog}
+\usepackage{appendix}
+\usepackage{biblatex}  
+\addbibresource{ref.bib}
+
+\title{Numerical SDE:EM方法}
+\author{Anqiao Ouyang}
+\date{July 29, 2025}
+
+\newcommand{\Title}{Numerical SDE:EM方法}
+\newcommand{\Column}{Numerical SDE:EM Method}
+\newcommand{\Author}{Anqiao Ouyang}
+
+
+\begin{document}
+\begin{CJK*}{UTF8}{gbsn}
+
+\maketitle
+
+\section{引言}
+
+\section{Euler-Maruyama Scheme}
+随机微分方程
+\begin{equation}
+    \mathrm{d}X_t=a(X_t)\mathrm{d}t+b(X_t)\mathrm{d}B_t\label{eq1}
+\end{equation}
+
+Ito公式:
+\begin{equation}
+    \mathrm{d}f(X_t)=f'(X_t)\mathrm{d}X_t+\frac{1}{2}f''(X_t)(\mathrm{d}X_t)^2
+\end{equation}
+with $(\mathrm{d}X_t)^2=b^2(X_t)\mathrm{d}t$
+进一步有
+\begin{equation}
+    \mathrm{d}f(X_t)=\left(a(X_t)f'(X_t)+\frac{1}{2}b^2(X_t)f''(X_t)\right)\mathrm{d}t+f'(X_t)b(X_t)\mathrm{d}B_t
+\label{eq2}\end{equation}
+\ref{eq1}完整的积分形式为
+\begin{equation}
+    \begin{aligned}
+    X_t-X_s
+    &=\int_s^t a(X_\tau)\mathrm{d}\tau+\int_s^tb(X_\tau)\mathrm{d}B_\tau
+    \end{aligned}
+\end{equation}
+取$s=t_{n},t=t_{n+1}$，则有
+\begin{equation}
+    \begin{aligned}
+        X_{t_{n+1}}-X_{t_n}
+        &=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}\\
+        &+\int_{t_{n}}^{t_{n+1}}[a(X_\tau)-a(X_{t_{n}})]\mathrm{d}\tau
+        +\int_{t_{n}}^{t_{n+1}}[b(X_\tau)-b(X_{t_{n}})]\mathrm{d}B_\tau
+    \end{aligned}\label{eq3}
+\end{equation}
+
+对$a(X_\tau)-a(X_{t_{n}})$和$b(X_\tau)-b(X_{t_{n}})$使用式\ref{eq2}。当然，需要$a,b$均满足光滑性条件。简记算子$L_1f(x)=a(x)f'(x)+\frac{1}{2}b(x)f''(x)$，$L_2f(x)=b(x)f'(x)$。以上两式可以简写为
+\begin{equation}\label{eq6}
+a(X_\tau)-a(X_{t_{n}})=\int_{t_n}^\tau L_1a(X_s)\mathrm{d}s+\int_{t_n}^\tau L_2a(X_s)\mathrm{d}B_s
+\end{equation}
+\begin{equation}\label{eq7}
+b(X_\tau)-b(X_{t_{n}})=\int_{t_n}^\tau L_1b(X_s)\mathrm{d}s+\int_{t_n}^\tau L_2b(X_s)\mathrm{d}B_s
+\end{equation}
+不难发现算子$L_1,L_2$都是线性的。再记式\ref{eq3}的后两项之和为$R$那么
+\begin{equation}\begin{aligned}
+R(N,X)
+&=\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_1a(X_s)\mathrm{d}s+
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_2a(X_s)\mathrm{d}B_s\\
+&+\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_1b(X_s)\mathrm{d}s
++\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_2b(X_s)\mathrm{d}B_s
+\end{aligned}\label{eq8}\end{equation}
+可以把$R$这一项视作误差项。\ref{eq3}就能简记成
+\begin{equation}
+    \Delta X_{t_n}=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}+R(N,X)\label{eq4}
+\end{equation}
+根据一般将\textbf{ode}转化成差分方程的经验，要数值解方程\ref{eq1}，不妨考虑它的差分形式
+\begin{equation}
+    \Delta X_{t_n}=a(X_{t_n})\Delta_{t_n}+b(X_{t_{n}})\Delta B_{t_n}
+\end{equation}
+又注意到，式\ref{eq4}中若$R(N,X)=0$，那么其形式完全等同于\textbf{差分形式}。$R(N,X)$便可视作误差项。只要$\Delta\to0$时，$R(N,X)\to0$。那么在一定的条件限制下（如$a,b$的\textbf{Lipschitz}条件），那么差分方程的解或许能逐渐逼近真解。实际上，这便是\textbf{Euler-Maruyama scheme}：
+\begin{equation}
+    \overline{X}_{t_{n+1}}=\overline{X_{t_n}}+a(\overline{X}_{t_{n}})\Delta_n+b(\overline{X}_{t_{n}})\Delta B_{t_n}
+\end{equation}
+
+既然$R(N,X)$是误差项，不估计一下阶怎么行呢？在此不妨假设对区间$[0,T]$进行等划分，即$\Delta t_n=\Delta=T/N$
+$$
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_1a(X_s)\mathrm{d}s\approx
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_1a(X_{t_n})\mathrm{d}s\approx
+\frac{1}{2}L_1a(X_{t_n})\Delta^2
+$$
+同理
+\begin{equation}
+\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau L_2a(X_s)\mathrm{d}B_s\approx
+\frac{1}{2}L_1a(X_{t_n})\Delta^{3/2}
+\label{eq5}\end{equation}
+\begin{equation}
+\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_1b(X_s)\mathrm{d}s\approx
+\frac{1}{2}L_1b(X_{t_n})\Delta^{3/2}
+\end{equation}
+\begin{equation}
+\int_{t_n}^{t_{n+1}}\mathrm{d}B_\tau\int_{t_n}^\tau L_2b(X_s)\mathrm{d}B_s\approx
+\frac{1}{2}L_2b(X_{t_n})(B_\Delta^2-\Delta)\approx
+\frac{1}{2}L_2b(X_{t_n})\Delta
+\end{equation}
+细节详见\ref{AppendixA}。注意到，上述阶中的主要部分为$O(\Delta)$，对应项为$\int\mathrm{d}B_\tau\int\mathrm{d}B_s$。尽管\textbf{E-M scheme}形式简单，但收敛性差了些。为改善\textbf{E-M scheme}的收敛性，考虑$O(\Delta)$就得到了\textbf{Milstein scheme}。
+
+\section{Milstein Scheme}
+$$
+\overline{X}_{t_{n+1}}=\overline{X_{t_n}}+a(\overline{X}_{t_{n}})\Delta_n+b(\overline{X}_{t_{n}})\Delta B_{t_n}+\frac{1}{2}L_2b(X_{t_n})(B_\Delta^2-\Delta)    
+$$
+
+\subsection{Higher Order}
+回忆我们之前怎么得到的\textbf{Milstein scheme}：对\ref{eq3}使用\ref{eq6}和\ref{eq7}。恰一看和\textbf{Taylor expansion}类似。那继续用\ref{eq6}、\ref{eq7}对\ref{eq8}进行展开，再忽略高阶项；。便得到
+$$\begin{aligned}
+R(\Delta,X)
+&=\sum_{i_1,i_2}L_{i_1}a_{i_1}(X_{t_n})\Delta_{i_1,i_2}\\
+&+\sum_{i_1,i_2,i_3}\int_{t_n}^{t_{n+1}}\int_{t_n}^{s_1}\int_{t_n}^{s_2}L_{i_1}L_{i_2}a_{i_3}(X_{s_3})\mathrm{d}B_{s_1}^{i_1}\mathrm{d}B_{s_2}^{i_2}\mathrm{d}B_{s_3}^{i_3}
+\end{aligned}$$
+其中$i_1,i_2,i_3=0,1$，$a_1,a_2=a,b$，$\Delta_{i_1,i_2}=\int_{t_n}^{t_{n+1}}\int_{t_n}^{s_1}\mathrm{d}B_{s_1}^{i_1}\mathrm{d}B_{s_2}^{i_2}$。
+而
+$$\mathrm{d}B_{s_j}^{i_j}=\begin{cases}
+\mathrm{d}s_j;&i_j=0\\
+\mathrm{d}B_{s_j};&i_j=1
+\end{cases}
+\space j=1,2,3
+$$
+于是得到高阶的\textbf{E-M scheme}:
+$$
+\begin{aligned}
+    \overline{X}_{t_{n+1}}
+    &=\overline{X_{t_n}}+a(\overline{X}_{t_{n}})\Delta_n+b(\overline{X}_{t_{n}})\Delta B_{t_n}\\
+    &+\sum_{i_1,i_2}L_{i_1}a_{i_1}(\overline{X}_{t_n})\Delta_{i_1,i_2}
+\end{aligned}
+$$
+\subsection{First Order Derivative Free Schemes}
+注意到\textbf{Milstein scheme}中$L_2b(X_{t_n})$包含求导项。而本小节标题意在避免求导项。因为$L_2b(X_{t_n})=bb'(X_{t_n})$，考虑
+$$
+\tilde{X}_{t_{n+1}}=X_{t_n}+a(X_{t_n})\Delta+b(X_{t_n})\sqrt{\Delta}
+$$
+之所以考虑上式的形式，是由于这样一个粗糙但实用的估计：$\Delta B_{t_n}\approx\sqrt{\Delta t_{n}}$
+使用非随机性的泰勒展开即可知道
+$$
+\frac{1}{\sqrt{\Delta}}\left(b(\tilde{X}_{t_{n+1}})-b({X}_{t_{n+1}})\right)$$
+是对$bb'(X_{t_n})$的逼近。因此有\textbf{First Order Derivative Free Schemes}：
+$$
+\overline{X}_{t_{n+1}}=\overline{X_{t_n}}+a(\overline{X}_{t_{n}})\Delta_n+b(\overline{X}_{t_{n}})\Delta B_{t_n}+\frac{1}{2}\frac{1}{\sqrt{\Delta}}\left(b(\tilde{X}_{t_{n+1}})-b({X}_{t_{n+1}})\right)(B_\Delta^2-\Delta)    
+$$
+\section{收敛性}
+\subsection{强收敛\&弱收敛}
+定义
+$$
+\epsilon_{t}(\delta)=\sup_{0\leq s\leq t}E|\overline{X}_{s}^{\delta}-X_{s}|
+$$
+$$
+r_{t}(\delta)=\sup_{0\le s\le t}\left|E(\phi(\bar{X}_{s}^{\delta}))-E(\phi_{s}({X}_{s}))\right|
+$$
+其中,$\phi\in C_b^\infty$，即有界光滑，且各阶导数均有界的函数。$\epsilon_{t}^{\delta},r_{t}^{\delta}$分别引出强收敛、弱收敛的概念。
+\begin{definition}[强收敛]
+    若存在$\alpha,\delta_0,C>0$使得对任意$0<\delta<\delta_0$满足
+    $$
+    \epsilon_{t}(\delta)\le C\delta^\alpha
+    $$
+    则称$\overline{X}^\delta$以阶数$\alpha$强收敛到$X$
+\end{definition}
+
+\begin{definition}[弱收敛]
+    若存在$\alpha,\delta_0,C>0$使得对任意$0<\delta<\delta_0$满足
+    $$
+    r_{t}(\delta)\le C\delta^\alpha,\forall\phi\in C_b^\infty
+    $$
+    则称$\overline{X}^\delta$强收敛到$X$
+\end{definition}
+下面仅仅证明\textbf{Euler-Maruyama scheme}的半阶强收敛性，以及一阶弱收敛性。
+
+
+\appendix
+\section{阶的粗糙估计\label{AppendixA}}
+式\ref{eq5}的估计稍微有些复杂。简单而言，就是对$\int_{t_n}^{t_{n+1}}\mathrm{d}\tau\int_{t_n}^\tau\mathrm{d}B_s$的估计。实际上就是对
+$$
+D_\Delta=\int_{0}^{\Delta} B_t\mathrm{d}t
+$$
+的估计。$I_\Delta$是$It\hat{o}$过程。不难求得$E(I_\Delta)=0$。应用$It\hat{o}$公式，有
+$$\begin{aligned}
+I_\Delta^2
+&=2\int_0^\Delta\int_0^tB_uB_t\mathrm{d}u\mathrm{d}t\\
+&=2\int^\Delta_0\int_0^t B_u(B_t-B_u)\mathrm{d}u\mathrm{d}t+2\int^\Delta_0\int_0^t B_u^2\mathrm{d}u\mathrm{d}t
+\end{aligned}$$
+因此
+$$
+E(I_\Delta^2)=2\int^\Delta_0\int_0^t E(B_u^2)\mathrm{d}u\mathrm{d}t=\Delta^3/3
+$$
+又或者，根据随机分布积分
+$$
+\int_0^\Delta B_t\mathrm{d}t+\int_0^\Delta t\mathrm{d}B_t=\Delta B_\Delta
+$$
+因此有
+$$
+I_\Delta^2=\Delta^2B_T^2+(\int_0^\Delta t\mathrm{d}B_t)^2-2\Delta\int_o^\Delta\mathrm{d}B_t\int_0^\Delta t\mathrm{d}B_t
+$$
+于是$E(I_\Delta^2)=\Delta^3+\Delta^3/3-\Delta^3$。后两项利用了$It\hat{o}$积分的性质。
+而
+$$
+\int_0^\Delta\int_0^t\mathrm{d}B_s\mathrm{d}B_t=\int_0^\Delta B_t\mathrm{d}B_t=\frac{1}{2}(B_\Delta^2-\Delta)
+$$
+可以记住几个粗糙但很实用的估计：$\mathrm{d}B_t\approx\sqrt{\mathrm{d}t},\mathrm{d}t\mathrm{d}B_t\approx0,(\mathrm{d}B_t)^2\approx\mathrm{d}t$。$\approx0$是在忽略高阶项的意义下成立。而第三项是对\textbf{二阶变差}的观察。
+\printbibliography
+\end{CJK*}
+\end{document}
