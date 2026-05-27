@@ -1,0 +1,441 @@
+\documentclass{article}
+\usepackage{CJKutf8}
+\usepackage{graphicx}
+\usepackage{math_blog}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{appendix}
+\usepackage[normalem]{ulem}
+\usepackage[thicklines]{cancel}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\usepackage{pgfplots}
+
+% Defensive: resolve possible \proof / theorem-env conflicts with math_blog
+\makeatletter
+\@ifundefined{proof}{}{\let\proof\@undefined \let\endproof\@undefined}
+\@ifundefined{theorem}{\newtheorem{theorem}{Theorem}[section]}{}
+\@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}
+\@ifundefined{definition}{\newtheorem{definition}[theorem]{Definition}}{}
+\@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}
+\@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}
+\@ifundefined{remark}{\newtheorem*{remark}{Remark}}{}
+\@ifundefined{example}{\newtheorem*{example}{Example}}{}
+\makeatother
+\newenvironment{proof}[1][Proof]{%
+  \par\smallskip\noindent\textit{\textbf{#1.}}\quad\ignorespaces
+}{%
+  \hfill$\square$\par\smallskip
+}
+
+\title{[SDE IV] Backward SDEs and the Nonlinear Feynman--Kac Formula}
+\author{Anqiao Ouyang, Xuecheng Liu}
+\date{Draft, \today}
+
+\newcommand{\Title}{Backward SDEs and the Nonlinear Feynman--Kac Formula}
+\newcommand{\Column}{Stochastic Differential Equations IV}
+\newcommand{\Author}{Anqiao Ouyang, Xuecheng Liu}
+
+% Math shortcuts
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\Lc}{\mathcal{L}}
+\newcommand{\Sc}{\mathcal{S}}
+\newcommand{\Hc}{\mathcal{H}}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+The previous three articles in this series built the forward picture of stochastic dynamics. In [SDE~I] we constructed Brownian motion and the surrounding measure-theoretic infrastructure. In [SDE~II] we developed the It\^o integral and the chain rule of stochastic calculus. In [SDE~III] we proved existence and uniqueness of solutions to forward SDEs and crossed over to PDEs via the Feynman--Kac formula: for the linear parabolic problem
+\[
+  \partial_t u + \Lc u = 0, \qquad u(T,x) = g(x),
+\]
+where $\Lc$ is the infinitesimal generator of $X$, the solution admits the probabilistic representation
+\[
+  u(t,x) = \E\big[g(X_T) \,\big|\, X_t = x\big].
+\]
+
+A natural question is what happens if we add a nonlinear source term to the PDE:
+\[
+  \partial_t u + \Lc u + f\!\big(t, x, u, \sigma^{\top}\nabla u\big) = 0, \qquad u(T, x) = g(x).
+\]
+The expectation in linear Feynman--Kac is taken at the fixed time $T$, and it does not see $u$ or $\nabla u$ inside the integrand. To bring those in, we need a representation that propagates information \emph{backward in time}, conditioning on the path of $X$ all along $[t, T]$. The object that does this is a \textbf{backward stochastic differential equation (BSDE)}.
+
+A BSDE is, schematically, an SDE run from a terminal condition $Y_T = \xi$ back to time $0$:
+\[
+  -dY_t = f(t, Y_t, Z_t)\,dt - Z_t\, dB_t, \qquad Y_T = \xi.
+\]
+The unknown is the pair $(Y_t, Z_t)$, where $Y$ is a real-valued process and $Z$ is the integrand against Brownian motion. As we will see in \S2, $Z$ is forced upon us by adaptedness: it is not an extra data choice but a consequence of the martingale representation theorem. When $\xi = g(X_T)$ and $f$ depends on $(t, X_t, Y_t, Z_t)$ in a Markovian way, the BSDE solves precisely the semilinear PDE above, with the identification
+\[
+  Y_t = u(t, X_t), \qquad Z_t = \sigma^{\top}(t, X_t)\, \nabla u(t, X_t).
+\]
+This is the \textbf{nonlinear Feynman--Kac formula} of Pardoux and Peng.
+
+The theory was initiated by Pardoux and Peng in 1990 and now sits at the heart of stochastic control, mathematical finance, and --- more recently --- deep-learning-based PDE solvers. In this article we will:
+
+\begin{itemize}
+  \item Define BSDEs precisely and explain why a pair $(Y, Z)$ is the right unknown (\S2).
+  \item Prove the Pardoux--Peng existence and uniqueness theorem under Lipschitz conditions (\S3).
+  \item Establish the comparison theorem and observe how it reflects the no-arbitrage structure of pricing (\S4).
+  \item State and prove the nonlinear Feynman--Kac formula for Markovian BSDEs, side by side with the linear version from [SDE~III] (\S5).
+  \item Apply the machinery to stochastic optimal control (HJB) and outline the Deep BSDE numerical method (\S6).
+  \item Close with an outlook on forward--backward coupling, mean-field BSDEs, and rough paths (\S7).
+\end{itemize}
+
+\paragraph{Standing notation.} We work on a filtered probability space $(\Omega, \F, (\F_t)_{0 \le t \le T}, \Prob)$ carrying a $d$-dimensional Brownian motion $B = (B_t)_{0 \le t \le T}$, with $(\F_t)$ the augmented filtration of $B$ and a fixed horizon $T > 0$. Vectors are columns; $\sigma^{\top}$ is matrix transpose; $|\cdot|$ denotes Euclidean norm. ``Adapted'' means $(\F_t)$-adapted; ``predictable'' means $(\F_t)$-predictable. We will reuse $K$ as a generic constant whose value may change from line to line.
+
+\section{Definition of BSDEs and the role of \texorpdfstring{$Z$}{Z}}
+
+\subsection{Why a pair?}
+
+Suppose we try to define a backward SDE in the naive way: pick a terminal condition $\xi \in L^2(\F_T)$ and a driver $f(t, y)$, and look for an $(\F_t)$-adapted process $Y$ satisfying
+\[
+  Y_T = \xi, \qquad -dY_t = f(t, Y_t)\,dt.
+\]
+This is just an ODE run backward, pathwise. The trouble is adaptedness: $Y_T = \xi$ is $\F_T$-measurable, so $Y_t$ defined by an ODE backward from $T$ inherits all the information in $\xi$, which violates $\F_t$-measurability at any earlier time $t < T$. In other words, knowing $Y_t$ would let us forecast $\xi$.
+
+The remedy is to allow a martingale correction. By the martingale representation theorem (e.g.\ \cite{revuz-yor}, Ch.~V), every square-integrable Brownian martingale $M$ with $M_0 = \E[\xi]$ admits a unique predictable integrand $Z \in \Hc^2$ such that
+\[
+  M_t = M_0 + \int_0^t Z_s\, dB_s.
+\]
+Choosing $M_t := \E[\xi \mid \F_t]$ produces the $Z$ that ``carries'' the news about $\xi$ revealed up to time $t$. The BSDE is the integral identity that combines the deterministic driver $f$ with this Brownian correction $Z\, dB$.
+
+\begin{definition}[BSDE solution]\label{def:bsde}
+Let $\xi \in L^2(\F_T; \R)$ and $f : [0,T] \times \Omega \times \R \times \R^d \to \R$ be progressively measurable. A pair of processes $(Y, Z)$ --- with $Y$ continuous, real-valued, $(\F_t)$-adapted, and $Z$ $(\F_t)$-predictable, $\R^d$-valued --- is called a \emph{solution} to the BSDE $(\xi, f)$ if
+\begin{equation}\label{eq:bsde}
+  Y_t = \xi + \int_t^T f(s, Y_s, Z_s)\,ds - \int_t^T Z_s\, dB_s, \qquad t \in [0, T],
+\end{equation}
+$\Prob$-a.s., and additionally
+\[
+  \E\!\Big[\sup_{0 \le t \le T}|Y_t|^2\Big] < \infty, \qquad \E\!\int_0^T |Z_s|^2\,ds < \infty.
+\]
+\end{definition}
+
+We give the solution spaces names:
+\[
+  \Sc^2 := \Big\{Y \text{ adapted, continuous} : \|Y\|_{\Sc^2}^2 := \E\!\big[\sup_t |Y_t|^2\big] < \infty\Big\},
+\]
+\[
+  \Hc^2 := \Big\{Z \text{ predictable} : \|Z\|_{\Hc^2}^2 := \E\!\int_0^T |Z_s|^2\,ds < \infty\Big\}.
+\]
+Both are Banach (in fact Hilbert), and the equation \eqref{eq:bsde} is to be read in $\Sc^2 \times \Hc^2$.
+
+\begin{remark}
+Differentiating \eqref{eq:bsde} gives the differential form
+\[
+  -dY_t = f(t, Y_t, Z_t)\,dt - Z_t\, dB_t, \qquad Y_T = \xi.
+\]
+The minus sign in front of $dY$ is bookkeeping: it records that time is being run backward from $T$. Some authors absorb it into the driver by writing $\widetilde{f} = -f$.
+\end{remark}
+
+\subsection{Two warm-up examples}
+
+\begin{example}[$f \equiv 0$: linear Feynman--Kac in disguise]
+The BSDE $(\xi, 0)$ reduces to $Y_t = \xi - \int_t^T Z_s\,dB_s$. Taking conditional expectations,
+\[
+  Y_t = \E[\xi \mid \F_t],
+\]
+and $Z$ is the integrand from the martingale representation of $M_t = \E[\xi \mid \F_t]$. The BSDE with zero driver is exactly the linear Feynman--Kac formula. Specializing to $\xi = g(X_T)$ recovers [SDE~III, Thm.~4.1].
+\end{example}
+
+\begin{example}[Linear driver and explicit solution]
+For $f(t, y, z) = \alpha_t\, y + \beta_t \cdot z + \gamma_t$ with bounded adapted coefficients, define the discount and change-of-measure factors
+\[
+  \Gamma_t := \exp\!\Big(\int_0^t \alpha_s\, ds\Big), \qquad \frac{d\Prob^\beta}{d\Prob}\bigg|_{\F_T} := \exp\!\Big(\int_0^T \beta_s\, dB_s - \tfrac12\!\int_0^T |\beta_s|^2 ds\Big).
+\]
+Then
+\[
+  \Gamma_t\, Y_t = \E^{\Prob^\beta}\!\Big[ \Gamma_T\, \xi + \int_t^T \Gamma_s\, \gamma_s\, ds \,\Big|\, \F_t\Big].
+\]
+This formula is the BSDE analogue of variation of parameters; we will use it inside the proof of the comparison theorem.
+\end{example}
+
+\section{Existence and Uniqueness}
+
+The cornerstone result of the linear theory is the following.
+
+\begin{theorem}[Pardoux--Peng, 1990]\label{thm:pp}
+Assume
+\begin{enumerate}
+  \item[(i)] $\xi \in L^2(\F_T)$;
+  \item[(ii)] $(t, \omega) \mapsto f(t, \omega, 0, 0)$ belongs to $\Hc^2$;
+  \item[(iii)] $f$ is uniformly Lipschitz in $(y, z)$: there exists $K \ge 0$ with
+    \[
+      |f(t, \omega, y, z) - f(t, \omega, y', z')| \le K\big(|y - y'| + |z - z'|\big)
+    \]
+    $dt \otimes d\Prob$-a.e.
+\end{enumerate}
+Then the BSDE \eqref{eq:bsde} admits a unique solution $(Y, Z) \in \Sc^2 \times \Hc^2$.
+\end{theorem}
+
+The proof rests on a contraction argument in the spirit of Picard iteration for forward SDEs ([SDE~III, \S2]), with one new ingredient: the contraction happens in a \emph{weighted} norm whose exponential weight absorbs the Lipschitz constant.
+
+\subsection{An a priori estimate}
+
+\begin{lemma}[A priori bound]\label{lem:apriori}
+If $(Y, Z) \in \Sc^2 \times \Hc^2$ solves \eqref{eq:bsde}, then for every $\beta > 2K + 2K^2$,
+\[
+  \E\!\int_0^T e^{\beta s}\big(|Y_s|^2 + |Z_s|^2\big)\,ds \le C \!\left( \E\big[ e^{\beta T}|\xi|^2 \big] + \E\!\int_0^T e^{\beta s}|f(s, 0, 0)|^2\, ds \right),
+\]
+for a constant $C$ depending only on $K$ and $\beta$.
+\end{lemma}
+
+\begin{proof}[Sketch]
+Apply It\^o's formula to $\varphi_t := e^{\beta t} |Y_t|^2$:
+\[
+  d\varphi_t = \beta e^{\beta t}|Y_t|^2\,dt + 2 e^{\beta t} Y_t\,dY_t + e^{\beta t} |Z_t|^2\,dt.
+\]
+Substituting $dY_t = -f(t, Y_t, Z_t)\,dt + Z_t\,dB_t$ and integrating from $t$ to $T$,
+\begin{align*}
+  e^{\beta t}|Y_t|^2 + \int_t^T e^{\beta s}\big(\beta |Y_s|^2 + |Z_s|^2\big)\,ds
+  &= e^{\beta T}|\xi|^2 + 2\int_t^T e^{\beta s}\, Y_s\, f(s, Y_s, Z_s)\,ds \\
+  &\quad - 2\int_t^T e^{\beta s}\, Y_s\, Z_s\, dB_s.
+\end{align*}
+Take expectations (the It\^o integral has zero mean given local boundedness, which one bootstraps from $(Y, Z) \in \Sc^2 \times \Hc^2$). Decompose
+\[
+  Y_s\, f(s, Y_s, Z_s) = Y_s\, f(s, 0, 0) + Y_s\big(f(s, Y_s, Z_s) - f(s, 0, 0)\big),
+\]
+use Lipschitz on the second piece and the elementary $2|y||z| \le \varepsilon|y|^2 + \varepsilon^{-1}|z|^2$, then choose $\varepsilon$ small and $\beta$ large enough to absorb $\beta|Y|^2$ and $|Z|^2$ on the left. The constant $\beta > 2K + 2K^2$ does the job.
+\end{proof}
+
+A consequence (apply the lemma with $\xi = 0$ and $f \equiv 0$, to two solutions): \emph{uniqueness}. Two solutions $(Y, Z)$, $(Y', Z')$ to the same BSDE have difference $(Y - Y', Z - Z')$ solving a BSDE with zero data; the estimate forces both to vanish.
+
+\subsection{Existence by contraction}
+
+Define a map $\Phi : \Sc^2 \times \Hc^2 \to \Sc^2 \times \Hc^2$ as follows. Given $(y, z)$, set $(Y, Z) := \Phi(y, z)$ to be the solution of the BSDE with \emph{constant} driver $f^{y,z}(t, \omega) := f(t, \omega, y_t, z_t)$ and terminal condition $\xi$:
+\[
+  Y_t = \xi + \int_t^T f(s, y_s, z_s)\,ds - \int_t^T Z_s\, dB_s.
+\]
+For this linear (in fact, no $Y$- or $Z$-dependence on the right) sub-problem we can write the solution down: define
+\[
+  N_t := \E\!\left[\xi + \int_0^T f(s, y_s, z_s)\,ds \,\bigg|\, \F_t\right].
+\]
+Then $N$ is a square-integrable martingale; by representation, $N_t = N_0 + \int_0^t Z_s\, dB_s$ for some predictable $Z \in \Hc^2$. Set
+\[
+  Y_t := N_t - \int_0^t f(s, y_s, z_s)\,ds.
+\]
+One checks directly that $(Y, Z)$ satisfies the sub-problem and lies in $\Sc^2 \times \Hc^2$.
+
+A direct computation using Lemma~\ref{lem:apriori} on the difference $\Phi(y, z) - \Phi(y', z')$ shows that, in the weighted norm
+\[
+  \|(Y, Z)\|_\beta^2 := \E\!\int_0^T e^{\beta s}\big(|Y_s|^2 + |Z_s|^2\big)\,ds,
+\]
+$\Phi$ is a strict contraction for $\beta$ sufficiently large. Banach's fixed-point theorem on the closed unit ball (or more precisely, on the complete metric space $(\Sc^2 \times \Hc^2, \|\cdot\|_\beta)$) gives a unique fixed point, which by construction is a solution to the BSDE \eqref{eq:bsde}. Combined with the uniqueness corollary, this completes the proof of Theorem~\ref{thm:pp}. $\square$
+
+\begin{remark}[What if $f$ is only monotone in $y$?]
+Lipschitz can be replaced by ``monotonicity in $y$ plus polynomial growth in $y$, Lipschitz in $z$'' (Pardoux 1999). The proof becomes more delicate but follows the same outline. Quadratic growth in $z$ (Kobylanski 2000) requires bounded $\xi$ and entirely different techniques (exponential transforms).
+\end{remark}
+
+\section{The Comparison Theorem}
+
+A defining feature of BSDEs --- and one with no counterpart in the forward theory --- is the following monotonicity in the data.
+
+\begin{theorem}[Comparison]\label{thm:comparison}
+Let $(Y^1, Z^1)$ and $(Y^2, Z^2)$ solve the BSDEs $(\xi^1, f^1)$ and $(\xi^2, f^2)$ respectively, with both drivers Lipschitz. Assume
+\[
+  \xi^1 \le \xi^2 \text{ a.s.}, \qquad f^1(t, Y^1_t, Z^1_t) \le f^2(t, Y^1_t, Z^1_t) \quad dt \otimes d\Prob\text{-a.e.}
+\]
+Then $Y^1_t \le Y^2_t$ a.s.\ for every $t \in [0, T]$.
+\end{theorem}
+
+\begin{proof}[Sketch]
+Set $\Delta Y := Y^2 - Y^1$ and $\Delta Z := Z^2 - Z^1$. Subtracting the two BSDEs,
+\[
+  -d\Delta Y_t = \big[f^2(t, Y^2, Z^2) - f^1(t, Y^1, Z^1)\big]\,dt - \Delta Z_t\, dB_t.
+\]
+Linearize the driver difference:
+\[
+  f^2(t, Y^2_t, Z^2_t) - f^1(t, Y^1_t, Z^1_t) = \alpha_t \Delta Y_t + \beta_t \cdot \Delta Z_t + \gamma_t,
+\]
+where $\alpha, \beta$ are bounded (by Lipschitz) and $\gamma_t := f^2(t, Y^1_t, Z^1_t) - f^1(t, Y^1_t, Z^1_t) \ge 0$ by hypothesis. So $\Delta Y$ solves a \emph{linear} BSDE with positive source. By a change of measure (Girsanov, [SDE~III, \S5]) under
+\[
+  \frac{d\Prob^\beta}{d\Prob}\bigg|_{\F_T} = \exp\!\Big(\int_0^T \beta_s\, dB_s - \tfrac12\!\int_0^T |\beta_s|^2\, ds\Big),
+\]
+the term $\beta \cdot \Delta Z$ is absorbed into the Brownian motion. Applying the linear-driver formula from \S2.2,
+\[
+  \Delta Y_t = \E^{\Prob^\beta}\!\left[ e^{\int_t^T \alpha_s\, ds}\, \Delta \xi + \int_t^T e^{\int_t^s \alpha_r\, dr}\, \gamma_s\, ds \,\bigg|\, \F_t \right].
+\]
+The integrand is a sum of two nonnegative quantities ($\Delta \xi \ge 0$ and $\gamma \ge 0$), so $\Delta Y_t \ge 0$.
+\end{proof}
+
+\begin{remark}[Finance interpretation]
+In an option-pricing model, $Y_t$ represents the price at time $t$ of a contract paying $\xi$ at maturity $T$, and $f$ encodes the cost of hedging (interest rates, dividends, portfolio constraints). The comparison theorem says: \emph{a more valuable payoff or a cheaper hedge yields a higher price.} This is the dynamic-programming form of no-arbitrage; it is what powers, for instance, the upper-bound pricing under model uncertainty (so-called $g$-expectations of Peng).
+\end{remark}
+
+\section{The Nonlinear Feynman--Kac Formula}
+
+We now specialize to the Markovian setting that makes contact with PDEs.
+
+\subsection{Setting}
+
+Fix $(t, x) \in [0, T) \times \R^n$. Consider the forward SDE
+\begin{equation}\label{eq:fwd}
+  dX^{t,x}_s = b(s, X^{t,x}_s)\,ds + \sigma(s, X^{t,x}_s)\, dB_s, \qquad X^{t,x}_t = x,\ s \in [t, T],
+\end{equation}
+with $b : [0, T] \times \R^n \to \R^n$ and $\sigma : [0, T] \times \R^n \to \R^{n \times d}$ satisfying the standing Lipschitz and linear-growth hypotheses from [SDE~III, \S2]. Coupled to it, consider the BSDE
+\begin{equation}\label{eq:fkbsde}
+  Y^{t,x}_s = g(X^{t,x}_T) + \int_s^T f\!\big(r, X^{t,x}_r, Y^{t,x}_r, Z^{t,x}_r\big)\,dr - \int_s^T Z^{t,x}_r\, dB_r,
+\end{equation}
+with $g : \R^n \to \R$ continuous of polynomial growth and $f : [0, T] \times \R^n \times \R \times \R^d \to \R$ continuous and uniformly Lipschitz in $(y, z)$. By Theorem~\ref{thm:pp}, the BSDE \eqref{eq:fkbsde} has a unique solution.
+
+Define the candidate PDE solution
+\[
+  u(t, x) := Y^{t,x}_t.
+\]
+Note that $Y^{t,x}_t$ is $\F_t$-measurable, and because $X^{t,x}_t = x$ deterministically, the value $Y^{t,x}_t$ is actually deterministic in $(t, x)$ --- so $u(t, x)$ is a number, not a random variable.
+
+Recall the generator of $X$:
+\[
+  \Lc \varphi(t, x) := b(t, x) \cdot \nabla \varphi(t, x) + \tfrac12\, \mathrm{tr}\!\big(\sigma\sigma^{\top}(t, x)\, \nabla^2 \varphi(t, x)\big).
+\]
+
+\begin{theorem}[Nonlinear Feynman--Kac]\label{thm:nlfk}
+\hfill
+\begin{enumerate}
+  \item[(a)] (Verification) If a function $v \in C^{1,2}([0, T] \times \R^n)$ of polynomial growth solves the semilinear parabolic problem
+  \begin{equation}\label{eq:semilinpde}
+    \partial_t v(t, x) + \Lc v(t, x) + f\!\big(t, x, v(t, x), \sigma^{\top}(t, x)\, \nabla v(t, x)\big) = 0,
+  \end{equation}
+  with terminal condition $v(T, x) = g(x)$, then for every $(t, x)$,
+  \[
+    Y^{t,x}_s = v(s, X^{t,x}_s), \qquad Z^{t,x}_s = \sigma^{\top}(s, X^{t,x}_s)\, \nabla v(s, X^{t,x}_s),
+  \]
+  is the unique solution to the BSDE \eqref{eq:fkbsde}. In particular $u(t, x) = v(t, x)$.
+
+  \item[(b)] (Representation) Conversely, if the candidate $u(t, x) := Y^{t,x}_t$ defined from the BSDE is in $C^{1,2}$, then $u$ solves \eqref{eq:semilinpde} with terminal condition $g$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}[Verification half]
+Suppose $v \in C^{1,2}$ solves \eqref{eq:semilinpde}. Apply It\^o's formula to $v(s, X^{t,x}_s)$:
+\[
+  dv(s, X_s) = \big(\partial_s v + \Lc v\big)(s, X_s)\,ds + \nabla v(s, X_s)^{\top} \sigma(s, X_s)\, dB_s.
+\]
+By the PDE \eqref{eq:semilinpde}, the drift becomes $-f(s, X_s, v, \sigma^{\top} \nabla v)$, so
+\[
+  -dv(s, X_s) = f\!\big(s, X_s, v(s, X_s), \sigma^{\top}(s, X_s) \nabla v(s, X_s)\big)\,ds - \sigma^{\top}(s, X_s) \nabla v(s, X_s)\, dB_s,
+\]
+with terminal value $v(T, X_T) = g(X_T)$. This is exactly the BSDE \eqref{eq:fkbsde} with $Y_s := v(s, X_s)$ and $Z_s := \sigma^{\top}(s, X_s) \nabla v(s, X_s)$. By the uniqueness half of Theorem~\ref{thm:pp}, this is the only solution.
+\end{proof}
+
+The converse (representation) half is more subtle: showing $u \in C^{1,2}$ requires either Malliavin smoothness of the flow $x \mapsto X^{t,x}_T$, or a regularization-by-uniformly-elliptic-noise argument. We refer to \cite{el-karoui-quenez} and \cite{pardoux-rascanu} for two complementary approaches.
+
+\begin{remark}[Why $\sigma^{\top} \nabla u$ and not $\nabla u$?]
+The forward SDE drives the noise through $\sigma$. It\^o's formula on $v(s, X_s)$ produces $(\nabla v)^{\top} \sigma\, dB$, so the integrand against $dB$ --- which is precisely what $Z$ is --- equals $\sigma^{\top} \nabla v$. When $\sigma = I_d$ (driftless Brownian noise on $\R^d$), this collapses to the familiar $Z = \nabla u$.
+\end{remark}
+
+\subsection{Linear vs.\ nonlinear: a side-by-side comparison}
+
+\begin{center}
+\begin{tabular}{p{0.45\textwidth}|p{0.45\textwidth}}
+\textbf{Linear Feynman--Kac (\,[SDE~III])} & \textbf{Nonlinear Feynman--Kac (this article)} \\
+\hline
+PDE: $\partial_t u + \Lc u = 0$, $u(T, x) = g(x)$ &
+PDE: $\partial_t u + \Lc u + f(t, x, u, \sigma^{\top} \nabla u) = 0$, $u(T, x) = g(x)$ \\
+\hline
+Probabilistic side: forward SDE only ($X^{t,x}$) &
+Probabilistic side: forward SDE \emph{plus} BSDE for $(Y, Z)$ \\
+\hline
+Representation: $u(t, x) = \E[g(X^{t,x}_T)]$ &
+Representation: $u(t, x) = Y^{t,x}_t$, the initial value of the BSDE \\
+\hline
+Gradient $\nabla u$: not represented; need Bismut--Elworthy or Malliavin &
+Gradient: $Z^{t,x}_t = \sigma^{\top}(t, x)\, \nabla u(t, x)$ --- read off directly from the BSDE \\
+\hline
+PDE drift has no $u$-dependence &
+$f$ may depend on $u$ and $\nabla u$ in any (Lipschitz) nonlinear way \\
+\end{tabular}
+\end{center}
+
+The right column reduces to the left when $f \equiv 0$, which is the warm-up example from \S2.2.
+
+\subsection{A worked example: a Fisher--KPP-type equation}
+
+Consider on $\R$ the semilinear equation
+\[
+  \partial_t u + \tfrac12 \partial_{xx} u + u(1 - u) = 0, \qquad u(T, x) = \mathbf{1}_{x > 0},
+\]
+with $b \equiv 0$, $\sigma \equiv 1$. The associated forward process is Brownian motion $X_s = x + B_s - B_t$, and the BSDE is
+\[
+  Y_s = \mathbf{1}_{x + B_T - B_t > 0} + \int_s^T Y_r(1 - Y_r)\, dr - \int_s^T Z_r\, dB_r.
+\]
+Theorem~\ref{thm:nlfk} identifies $u(t, x) = Y^{t,x}_t$. Note that $u \in [0, 1]$ pathwise --- one can check that the driver $y \mapsto y(1 - y)$ preserves the interval $[0, 1]$ via the comparison theorem applied to the constant solutions $y \equiv 0$ and $y \equiv 1$. This is exactly the maximum principle for the Fisher--KPP equation, recovered probabilistically.
+
+The BSDE route also gives a Monte Carlo algorithm for $u$ that never touches a grid: simulate $X$ forward, then march $(Y, Z)$ backward by a discretization. This is the entry point to the Deep BSDE method of \S6.2.
+
+\section{Applications}
+
+\subsection{Stochastic optimal control and HJB}
+
+Consider a controlled diffusion
+\[
+  dX^\alpha_s = b(s, X^\alpha_s, \alpha_s)\, ds + \sigma(s, X^\alpha_s)\, dB_s,
+\]
+where the control $\alpha$ takes values in a compact action set $A \subset \R^k$ and is required to be adapted. With running cost $\ell$ and terminal cost $g$, define the value function
+\[
+  V(t, x) := \inf_{\alpha}\, \E\!\left[ \int_t^T \ell(s, X^\alpha_s, \alpha_s)\,ds + g(X^\alpha_T) \,\bigg|\, X^\alpha_t = x \right].
+\]
+By the dynamic programming principle, $V$ formally satisfies the Hamilton--Jacobi--Bellman equation
+\[
+  \partial_t V(t, x) + \inf_{a \in A}\Big\{ b(t, x, a) \cdot \nabla V + \tfrac12\, \mathrm{tr}(\sigma \sigma^{\top}\, \nabla^2 V) + \ell(t, x, a) \Big\} = 0, \quad V(T, x) = g(x).
+\]
+In the case where $\sigma$ does not depend on $a$ (so-called \emph{drift control}), the HJB equation is of the semilinear form \eqref{eq:semilinpde} with
+\[
+  f(t, x, y, z) = \inf_{a \in A}\!\Big\{ b(t, x, a) \cdot \sigma^{-\top}(t, x)\, z + \ell(t, x, a) \Big\}
+\]
+(assuming $\sigma$ is invertible; if not, work with $\sigma^{\top} \nabla V = Z$ as the primary object and a generalized Hamiltonian). The BSDE associated with this driver therefore gives a probabilistic representation of $V$ that bypasses the regularity demands of viscosity-solution theory, and produces an optimal feedback control $\alpha^*(s, X_s) \in \arg\min_a \{\cdots\}$ as a measurable selector.
+
+When $\sigma$ \emph{does} depend on $a$, the BSDE picture must be replaced by a \emph{second-order} BSDE (2BSDE, Soner--Touzi--Zhang); this is one of the threads of \S7.
+
+\subsection{Deep BSDE for high-dimensional PDEs}
+
+The PDE \eqref{eq:semilinpde} in high spatial dimension $n$ is out of reach for grid-based solvers: storage is $\Theta(N^n)$ for $N$ points per axis. The Deep BSDE method of Han, Jentzen, and E (\cite{han-jentzen-e}) recasts solving the PDE as a single global stochastic optimization. Discretize time as $0 = t_0 < t_1 < \cdots < t_M = T$ with $\Delta t = T/M$. Parameterize:
+\begin{itemize}
+  \item the initial value by a scalar $\theta_0 \in \R$ (the candidate for $u(0, x_0)$);
+  \item the spatial gradient $z(t, x) := \sigma^{\top}(t, x)\,\nabla u(t, x)$ by a neural network $z^\theta(t, x)$ with parameters $\theta$.
+\end{itemize}
+Simulate the forward Euler--Maruyama discretization of $X$ starting from $x_0$, and propagate
+\[
+  Y^\theta_{t_{k+1}} = Y^\theta_{t_k} - f\!\big(t_k, X_{t_k}, Y^\theta_{t_k}, z^\theta(t_k, X_{t_k})\big)\, \Delta t + z^\theta(t_k, X_{t_k}) \cdot \Delta B_k,
+\]
+with $Y^\theta_0 = \theta_0$. Train $\theta = (\theta_0, \theta_{\rm net})$ by stochastic gradient descent on the terminal-condition mismatch loss
+\[
+  \mathcal{J}(\theta) := \E\!\left[ \big| g(X_T) - Y^\theta_T \big|^2 \right].
+\]
+At a minimizer, $\theta_0 \approx u(0, x_0)$ and $z^\theta(\cdot, \cdot) \approx \sigma^{\top} \nabla u$.
+
+The mathematical content is the \emph{variational characterization}: the function $u(0, x_0)$ is the unique value such that, when $Y_0 = u(0, x_0)$ and $Z$ is the BSDE solution, the residual $g(X_T) - Y_T$ vanishes a.s. Replacing ``a.s.'' by ``in $L^2$'' gives the loss, and replacing ``BSDE solution $Z$'' by ``best-NN approximation $z^\theta$'' gives the algorithm. The connection between $L^2$-loss and a.s.\ equality is precisely the BSDE uniqueness lemma in disguise.
+
+In practice, Deep BSDE handles $n = 100$ on a laptop in minutes, well beyond the reach of finite differences. Reported accuracy is $10^{-3}$ to $10^{-4}$ relative error on benchmark problems (HJB, Black--Scholes with default risk, Allen--Cahn).
+
+\section{Outlook}
+
+We close with three threads that the next article in this series could follow.
+
+\paragraph{Forward--backward coupling (FBSDEs).} If the forward coefficients depend on $Y$ or $Z$, we obtain a \emph{coupled} forward--backward SDE:
+\begin{align*}
+  dX_s &= b(s, X_s, Y_s, Z_s)\,ds + \sigma(s, X_s, Y_s, Z_s)\, dB_s, \\
+  -dY_s &= f(s, X_s, Y_s, Z_s)\,ds - Z_s\, dB_s, \qquad Y_T = g(X_T).
+\end{align*}
+This is the natural language of fully coupled stochastic optimal control via Pontryagin's maximum principle. Existence requires either a monotonicity condition (Ma--Yong), a small-time hypothesis (Antonelli), or the four-step scheme (Ma--Protter--Yong) when the PDE side has a classical solution.
+
+\paragraph{Mean-field BSDEs.} Letting the driver depend on the marginal law $\mathcal{L}(Y_s)$ leads to McKean--Vlasov BSDEs, the natural language of mean-field games. The corresponding PDE lives on $[0, T] \times \R^n \times \mathcal{P}_2(\R^n)$ --- the so-called master equation --- and links back to the Wasserstein calculus of Lions.
+
+\paragraph{Rough paths and rough BSDEs.} If the driving noise is rougher than Brownian motion (e.g.\ fractional Brownian motion with Hurst parameter $H < 1/2$), the It\^o calculus underlying BSDEs breaks down. Lyons' rough path theory and Hairer's regularity structures supply the replacement; rough BSDEs are an active area, with the Diehl--Friz--Gassiat formulation as the standard reference.
+
+\paragraph{Acknowledgments.} We thank our reader for following the series. As always, comments, corrections, and counter-examples are welcome.
+
+\begin{thebibliography}{9}
+\bibitem{pp1990} Pardoux, \'E., Peng, S. \emph{Adapted solution of a backward stochastic differential equation.} Systems Control Lett.\ 14 (1990), 55--61.
+\bibitem{el-karoui-quenez} El Karoui, N., Peng, S., Quenez, M.~C. \emph{Backward stochastic differential equations in finance.} Math.\ Finance 7 (1997), 1--71.
+\bibitem{han-jentzen-e} Han, J., Jentzen, A., E, W. \emph{Solving high-dimensional partial differential equations using deep learning.} PNAS 115 (2018), 8505--8510.
+\bibitem{pardoux-rascanu} Pardoux, \'E., R\u{a}\c{s}canu, A. \emph{Stochastic Differential Equations, Backward SDEs, Partial Differential Equations.} Springer, 2014.
+\bibitem{revuz-yor} Revuz, D., Yor, M. \emph{Continuous Martingales and Brownian Motion}, 3rd ed., Springer, 1999.
+\end{thebibliography}
+
+\end{document}
