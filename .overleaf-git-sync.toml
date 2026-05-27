@@ -1,0 +1,3 @@
+# overleaf-git-sync configuration
+project_id = "688782544e7f993835152bb7"
+# overleaf_root = "SDE"  # autodetect handles the wrapping SDE/ folder

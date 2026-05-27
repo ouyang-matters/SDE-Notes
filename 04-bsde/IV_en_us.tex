@@ -133,6 +133,48 @@ Differentiating \eqref{eq:bsde} gives the differential form
 The minus sign in front of $dY$ is bookkeeping: it records that time is being run backward from $T$. Some authors absorb it into the driver by writing $\widetilde{f} = -f$.
 \end{remark}
 
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=1.0]
+\draw[->] (-0.4,0) -- (10.7,0) node[right] {\small time};
+\node[below] at (0,0) {\small$0$};
+\node[below] at (3.0,-0.05) {\small$t$};
+\node[below] at (9.5,-0.05) {\small$T$};
+\foreach \x in {0,3.0,9.5} \draw (\x,0.08) -- (\x,-0.08);
+
+% Forward X path
+\draw[blue, thick] plot[smooth] coordinates {
+  (3.0,1.6) (3.4,1.5) (3.8,1.85) (4.2,1.7) (4.6,2.1) (5.0,1.9)
+  (5.4,2.3) (5.8,2.6) (6.2,2.4) (6.6,2.85) (7.0,3.05) (7.4,2.9)
+  (7.8,3.3) (8.2,3.45) (8.6,3.25) (9.0,3.55) (9.5,3.4)};
+\fill[blue] (3.0,1.6) circle (2pt) node[left,blue] {\small$X^{t,x}_t=x$};
+\fill[blue] (9.5,3.4) circle (2pt) node[above right,blue] {\small$X^{t,x}_T$};
+\node[blue] at (5.4,3.55) {\small forward SDE: $X^{t,x}$};
+\draw[->, blue!70, thick] (3.4,1.05) -- (5.6,1.05);
+\node[blue!70, below, font=\scriptsize] at (4.5,1.05) {time $\longrightarrow$};
+
+% Backward Y path
+\draw[red, thick] plot[smooth] coordinates {
+  (3.0,-1.4) (3.4,-1.42) (3.8,-1.32) (4.2,-1.5) (4.6,-1.4) (5.0,-1.55)
+  (5.4,-1.45) (5.8,-1.6) (6.2,-1.55) (6.6,-1.7) (7.0,-1.62) (7.4,-1.78)
+  (7.8,-1.7) (8.2,-1.85) (8.6,-1.78) (9.0,-1.92) (9.5,-2.0)};
+\fill[red] (3.0,-1.4) circle (2pt) node[left,red] {\small$Y_t=u(t,x)$};
+\fill[red] (9.5,-2.0) circle (2pt) node[right,red] {\small$\xi=g(X_T)$};
+\node[red] at (5.7,-2.55) {\small backward SDE: $(Y,Z)$};
+\draw[<-, red!70, thick] (5.7,-0.55) -- (7.9,-0.55);
+\node[red!70, above, font=\scriptsize] at (6.8,-0.55) {$\longleftarrow$ time};
+
+\draw[gray!50, dashed] (3.0,1.6) -- (3.0,-1.4);
+\draw[gray!50, dashed] (9.5,3.4) -- (9.5,-2.0);
+
+\node[align=center,font=\scriptsize, gray!60!black] at (10.6,0.85) {same $dB_s$};
+\draw[->, gray!60!black] (10.3,0.65) -- (9.7,0.3);
+\draw[->, gray!60!black] (10.3,0.65) -- (9.7,-1.0);
+\end{tikzpicture}
+\caption{The forward--backward picture underlying the nonlinear Feynman--Kac formula. The diffusion $X^{t,x}$ is launched from $x$ at time $t$ and runs \emph{forward} to a random terminal value $X_T$; the terminal payoff $\xi = g(X_T)$ is then transported \emph{backward} by the BSDE to produce $Y_t = u(t,x)$. Both processes are driven by the same Brownian increments $dB_s$ on $[t,T]$: the forward equation uses them through the diffusion coefficient $\sigma$, the backward equation through the integrand $Z$. Adaptedness forces $Y_t$ to be a function of the history up to $t$ only; this is what makes $Z$ unavoidable.}
+\label{fig:fwd-bwd}
+\end{figure}
+
 \subsection{Two warm-up examples}
 
 \begin{example}[$f \equiv 0$: linear Feynman--Kac in disguise]
@@ -207,25 +249,54 @@ A consequence (apply the lemma with $\xi = 0$ and $f \equiv 0$, to two solutions
 
 \subsection{Existence by contraction}
 
-Define a map $\Phi : \Sc^2 \times \Hc^2 \to \Sc^2 \times \Hc^2$ as follows. Given $(y, z)$, set $(Y, Z) := \Phi(y, z)$ to be the solution of the BSDE with \emph{constant} driver $f^{y,z}(t, \omega) := f(t, \omega, y_t, z_t)$ and terminal condition $\xi$:
+Define a map $\Phi : \Sc^2 \times \Hc^2 \to \Sc^2 \times \Hc^2$ as follows. Given $(y, z)$, set $(Y, Z) := \Phi(y, z)$ to be the solution of the BSDE with \emph{frozen} driver $f^{y,z}(t, \omega) := f(t, \omega, y_t, z_t)$ and terminal condition $\xi$:
 \[
   Y_t = \xi + \int_t^T f(s, y_s, z_s)\,ds - \int_t^T Z_s\, dB_s.
 \]
-For this linear (in fact, no $Y$- or $Z$-dependence on the right) sub-problem we can write the solution down: define
+For this linear sub-problem (no $Y$- or $Z$-dependence on the right) the solution can be written explicitly: set
 \[
   N_t := \E\!\left[\xi + \int_0^T f(s, y_s, z_s)\,ds \,\bigg|\, \F_t\right].
 \]
-Then $N$ is a square-integrable martingale; by representation, $N_t = N_0 + \int_0^t Z_s\, dB_s$ for some predictable $Z \in \Hc^2$. Set
+Then $N$ is a square-integrable martingale; by Brownian representation, $N_t = N_0 + \int_0^t Z_s\, dB_s$ for a unique predictable $Z \in \Hc^2$. Put
 \[
-  Y_t := N_t - \int_0^t f(s, y_s, z_s)\,ds.
+  Y_t := N_t - \int_0^t f(s, y_s, z_s)\,ds,
 \]
-One checks directly that $(Y, Z)$ satisfies the sub-problem and lies in $\Sc^2 \times \Hc^2$.
+and verify directly that $(Y, Z)$ satisfies the sub-problem and lies in $\Sc^2 \times \Hc^2$.
 
-A direct computation using Lemma~\ref{lem:apriori} on the difference $\Phi(y, z) - \Phi(y', z')$ shows that, in the weighted norm
+The next lemma turns the a priori bound into a quantitative Lipschitz estimate on $\Phi$.
+
+\begin{lemma}[Difference estimate]\label{lem:diff}
+For $(y, z), (y', z') \in \Sc^2 \times \Hc^2$, let $(Y, Z) := \Phi(y, z)$, $(Y', Z') := \Phi(y', z')$. For every $\beta \ge 2$,
 \[
-  \|(Y, Z)\|_\beta^2 := \E\!\int_0^T e^{\beta s}\big(|Y_s|^2 + |Z_s|^2\big)\,ds,
+  \|(Y - Y', Z - Z')\|_\beta^2 \;\le\; \frac{4K^2}{\beta}\, \|(y - y', z - z')\|_\beta^2,
 \]
-$\Phi$ is a strict contraction for $\beta$ sufficiently large. Banach's fixed-point theorem on the closed unit ball (or more precisely, on the complete metric space $(\Sc^2 \times \Hc^2, \|\cdot\|_\beta)$) gives a unique fixed point, which by construction is a solution to the BSDE \eqref{eq:bsde}. Combined with the uniqueness corollary, this completes the proof of Theorem~\ref{thm:pp}. $\square$
+where $\|(U, V)\|_\beta^2 := \E\!\int_0^T e^{\beta s}\big(|U_s|^2 + |V_s|^2\big)\,ds$ and $K$ is the Lipschitz constant of $f$ in $(y, z)$.
+\end{lemma}
+
+\begin{proof}
+Write $\Delta y := y - y'$, $\Delta z := z - z'$, $\Delta Y := Y - Y'$, $\Delta Z := Z - Z'$, and $\Delta f_s := f(s, y_s, z_s) - f(s, y'_s, z'_s)$. The two frozen BSDEs are identical at time $T$ ($\Delta Y_T = 0$) and yield
+\[
+  d\Delta Y_t = -\Delta f_t\, dt + \Delta Z_t\, dB_t.
+\]
+Apply It\^o's formula to $e^{\beta s} |\Delta Y_s|^2$ on $[0, T]$, take expectations, and use $\Delta Y_T = 0$:
+\[
+  \E\!\int_0^T e^{\beta s}\!\big(\beta |\Delta Y_s|^2 + |\Delta Z_s|^2\big)\, ds \;=\; 2\,\E\!\int_0^T e^{\beta s}\, \Delta Y_s\, \Delta f_s\, ds.
+\]
+By Lipschitz, $|\Delta f_s| \le K(|\Delta y_s| + |\Delta z_s|)$. Applying $2ab \le \tfrac{\beta}{4}a^2 + \tfrac{4}{\beta} b^2$ to each cross term,
+\[
+  2\, \Delta Y_s\, \Delta f_s \;\le\; \tfrac{\beta}{2}|\Delta Y_s|^2 + \tfrac{4 K^2}{\beta}\!\big(|\Delta y_s|^2 + |\Delta z_s|^2\big).
+\]
+Absorb the $\tfrac{\beta}{2}|\Delta Y|^2$ on the left and use $\beta \ge 2$ to bound the $|\Delta Z|^2$ coefficient below by $1$, giving
+\[
+  \E\!\int_0^T e^{\beta s}\big(|\Delta Y_s|^2 + |\Delta Z_s|^2\big)\, ds \;\le\; \frac{4K^2}{\beta}\, \E\!\int_0^T e^{\beta s}\big(|\Delta y_s|^2 + |\Delta z_s|^2\big)\, ds.
+\]
+\end{proof}
+
+\noindent Choosing any $\beta > 4K^2$ (e.g.\ $\beta = 8 K^2 + 2$) makes $\Phi$ a strict contraction in $\|\cdot\|_\beta$ with ratio $\sqrt{4K^2/\beta} < 1$. Banach's fixed-point theorem on the complete metric space $(\Sc^2 \times \Hc^2, \|\cdot\|_\beta)$ produces a unique fixed point, which by construction solves the BSDE \eqref{eq:bsde}. Combined with the uniqueness corollary, this completes the proof of Theorem~\ref{thm:pp}. $\square$
+
+\begin{remark}[Why a weighted norm?]
+The unweighted $L^2$-norm fails because the contraction constant from the same calculation reads $4 K^2 T$, which is $\ge 1$ once $T$ is moderately large. The exponential weight $e^{\beta s}$ rescales time so that one can spend the full Lipschitz budget locally without the global horizon $T$ entering. The same trick (under the name ``Bielecki norm'') is the standard cure for Picard-type contractions on long intervals --- it appeared in [SDE~III, \S2] for forward SDEs and is even more crucial here, because the BSDE cannot be solved by short-step concatenation: shrinking $T$ does not help, since the terminal datum lives at $T$.
+\end{remark}
 
 \begin{remark}[What if $f$ is only monotone in $y$?]
 Lipschitz can be replaced by ``monotonicity in $y$ plus polynomial growth in $y$, Lipschitz in $z$'' (Pardoux 1999). The proof becomes more delicate but follows the same outline. Quadratic growth in $z$ (Kobylanski 2000) requires bounded $\xi$ and entirely different techniques (exponential transforms).
@@ -264,8 +335,38 @@ The integrand is a sum of two nonnegative quantities ($\Delta \xi \ge 0$ and $\g
 \end{proof}
 
 \begin{remark}[Finance interpretation]
-In an option-pricing model, $Y_t$ represents the price at time $t$ of a contract paying $\xi$ at maturity $T$, and $f$ encodes the cost of hedging (interest rates, dividends, portfolio constraints). The comparison theorem says: \emph{a more valuable payoff or a cheaper hedge yields a higher price.} This is the dynamic-programming form of no-arbitrage; it is what powers, for instance, the upper-bound pricing under model uncertainty (so-called $g$-expectations of Peng).
+In an option-pricing model, $Y_t$ represents the price at time $t$ of a contract paying $\xi$ at maturity $T$, and $f$ encodes the cost of hedging (interest rates, dividends, portfolio constraints). The comparison theorem says: \emph{a more valuable payoff or a cheaper hedge yields a higher price.} This is the dynamic-programming form of no-arbitrage; it is what powers, for instance, the upper-bound pricing under model uncertainty.
 \end{remark}
+
+\begin{corollary}[Strict comparison]\label{cor:strict-comp}
+Under the hypotheses of Theorem~\ref{thm:comparison}, if additionally
+\[
+  \Prob(\xi^1 < \xi^2) > 0 \qquad\text{or}\qquad f^1 < f^2 \text{ at } (Y^1, Z^1)\text{ on a set of positive } dt\otimes d\Prob\text{-measure,}
+\]
+then $Y^1_0 < Y^2_0$.
+\end{corollary}
+
+\begin{proof}
+In the representation derived in the proof of Theorem~\ref{thm:comparison},
+\[
+  \Delta Y_0 = \E^{\Prob^\beta}\!\left[ e^{\int_0^T \alpha_s\, ds}\, \Delta \xi + \int_0^T e^{\int_0^s \alpha_r\, dr}\, \gamma_s\, ds \right],
+\]
+the integrand is nonnegative and, under one of the two hypotheses, strictly positive on a set of positive $\Prob^\beta$-measure (which coincides with positive $\Prob$-measure by absolute continuity of $\Prob^\beta$). Hence $\Delta Y_0 > 0$.
+\end{proof}
+
+\subsection{$g$-expectations and dynamic risk measures}
+
+The comparison theorem is what makes the following construction well-defined. Fix a Lipschitz driver $g : [0,T] \times \R \times \R^d \to \R$ satisfying $g(t, y, 0) = 0$, and for $\xi \in L^2(\F_T)$ let $(Y^\xi, Z^\xi)$ be the unique solution of the BSDE $(\xi, g)$. Define the \emph{$g$-expectation} and its conditional version by
+\[
+  \mathcal{E}_g[\xi] := Y^\xi_0, \qquad \mathcal{E}_g[\xi \mid \F_t] := Y^\xi_t.
+\]
+The condition $g(\cdot, \cdot, 0) = 0$ ensures that $\mathcal{E}_g[c] = c$ for constants. The operator $\mathcal{E}_g$ is in general nonlinear in $\xi$ (linearity holds iff $g$ is linear in $(y, z)$), but it retains the structural features of an expectation:
+\begin{enumerate}
+  \item[(M)] \emph{Monotonicity:} $\xi^1 \le \xi^2 \Rightarrow \mathcal{E}_g[\xi^1 \mid \F_t] \le \mathcal{E}_g[\xi^2 \mid \F_t]$ (Theorem~\ref{thm:comparison}).
+  \item[(T)] \emph{Time-consistency:} $\mathcal{E}_g[\mathcal{E}_g[\xi \mid \F_s] \mid \F_t] = \mathcal{E}_g[\xi \mid \F_t]$ for $t \le s$ (flow property of the BSDE).
+  \item[(L)] \emph{Locality / zero-one law:} $\mathbf{1}_A \mathcal{E}_g[\xi \mid \F_t] = \mathbf{1}_A \mathcal{E}_g[\mathbf{1}_A \xi \mid \F_t]$ for $A \in \F_t$.
+\end{enumerate}
+When $g$ is positively homogeneous and subadditive in $(y, z)$, $\rho_t(\xi) := \mathcal{E}_g[-\xi \mid \F_t]$ is a \emph{dynamic coherent risk measure} in the sense of Artzner--Delbaen--Eber--Heath; convex $g$ gives a dynamic convex risk measure. Conversely, a theorem of Coquet--Hu--M\'emin--Peng characterizes which dynamically consistent nonlinear expectations arise this way: precisely those dominated by a $g_\mu$-expectation for the linear driver $g_\mu(z) = \mu|z|$. Nonlinearity in $g$ encodes hedging frictions (bid--ask spreads, collateral, capital charges) and Knightian uncertainty about the law of $X$.
 
 \section{The Nonlinear Feynman--Kac Formula}
 
@@ -329,6 +430,18 @@ The converse (representation) half is more subtle: showing $u \in C^{1,2}$ requi
 The forward SDE drives the noise through $\sigma$. It\^o's formula on $v(s, X_s)$ produces $(\nabla v)^{\top} \sigma\, dB$, so the integrand against $dB$ --- which is precisely what $Z$ is --- equals $\sigma^{\top} \nabla v$. When $\sigma = I_d$ (driftless Brownian noise on $\R^d$), this collapses to the familiar $Z = \nabla u$.
 \end{remark}
 
+\begin{remark}[The Malliavin viewpoint]\label{rem:malliavin}
+If $\xi$ and the data are Malliavin-differentiable in the sense of Nualart, then so is the solution $(Y, Z)$, and one has the identification
+\begin{equation}\label{eq:Z-DY}
+  Z_t \;=\; D_t Y_t \qquad dt \otimes d\Prob\text{-a.e.,}
+\end{equation}
+where $D_t$ is the Malliavin derivative (Pardoux--Peng 1992; El Karoui--Peng--Quenez 1997). The pair $(D_s Y_t, D_s Z_t)_{s \le t}$ itself solves a linear BSDE obtained by differentiating \eqref{eq:bsde} formally, which feeds back the regularity of the data into regularity of the solution. In the Markovian setting the chain rule and the tangent-flow formula $D_s X_t = \mathbf{1}_{s \le t}\,\nabla_x X^{s,X_s}_t\, \sigma(s, X_s)$ collapse \eqref{eq:Z-DY} to
+\[
+  Z_t = \sigma^{\top}(t, X_t)\, \nabla u(t, X_t),
+\]
+matching part (a) of Theorem~\ref{thm:nlfk} \emph{without} assuming $u \in C^{1,2}$ a priori. The Malliavin route is in fact how the converse half is proved: one establishes Sobolev (rather than classical) regularity of $u$ on the support of the law of $X$, then upgrades to $C^{1,2}$ via parabolic Schauder estimates when $\sigma\sigma^{\top}$ is uniformly elliptic.
+\end{remark}
+
 \subsection{Linear vs.\ nonlinear: a side-by-side comparison}
 
 \begin{center}
@@ -367,6 +480,40 @@ with $b \equiv 0$, $\sigma \equiv 1$. The associated forward process is Brownian
 Theorem~\ref{thm:nlfk} identifies $u(t, x) = Y^{t,x}_t$. Note that $u \in [0, 1]$ pathwise --- one can check that the driver $y \mapsto y(1 - y)$ preserves the interval $[0, 1]$ via the comparison theorem applied to the constant solutions $y \equiv 0$ and $y \equiv 1$. This is exactly the maximum principle for the Fisher--KPP equation, recovered probabilistically.
 
 The BSDE route also gives a Monte Carlo algorithm for $u$ that never touches a grid: simulate $X$ forward, then march $(Y, Z)$ backward by a discretization. This is the entry point to the Deep BSDE method of \S6.2.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.85\textwidth, height=6cm,
+    xlabel={$s$}, ylabel={$Y_s$},
+    xmin=0, xmax=1.05,
+    ymin=-0.08, ymax=1.12,
+    no markers,
+    samples=100, smooth,
+]
+\addplot[gray, dashed, very thick, domain=0:1] {1};
+\addplot[gray, dashed, very thick, domain=0:1] {0};
+\node[gray, anchor=west, font=\scriptsize] at (axis cs: 1.005, 1) {$y\equiv1$};
+\node[gray, anchor=west, font=\scriptsize] at (axis cs: 1.005, 0) {$y\equiv0$};
+
+\addplot[blue, thick] coordinates {
+(0,0.66)(0.1,0.69)(0.2,0.72)(0.3,0.75)(0.4,0.79)(0.5,0.82)(0.6,0.85)(0.7,0.89)(0.8,0.92)(0.9,0.96)(1.0,1.0)
+};
+\addplot[red, thick] coordinates {
+(0,0.32)(0.1,0.27)(0.2,0.23)(0.3,0.21)(0.4,0.17)(0.5,0.13)(0.6,0.09)(0.7,0.07)(0.8,0.04)(0.9,0.02)(1.0,0)
+};
+\addplot[green!55!black, thick] coordinates {
+(0,0.49)(0.1,0.53)(0.2,0.50)(0.3,0.58)(0.4,0.62)(0.5,0.66)(0.6,0.70)(0.7,0.78)(0.8,0.86)(0.9,0.94)(1.0,1.0)
+};
+\addplot[orange, thick] coordinates {
+(0,0.51)(0.1,0.45)(0.2,0.38)(0.3,0.33)(0.4,0.28)(0.5,0.22)(0.6,0.16)(0.7,0.11)(0.8,0.06)(0.9,0.02)(1.0,0)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Four simulated $Y$-trajectories for the Fisher--KPP BSDE on $[0, T] = [0, 1]$ with $x = 0$, generated by Euler--Maruyama discretization of the forward Brownian path together with an explicit backward sweep for $(Y, Z)$. All trajectories remain in $[0, 1]$: the constants $y \equiv 0$ and $y \equiv 1$ are themselves BSDE solutions for the boundary terminal data $\xi = 0$ and $\xi = 1$, and the comparison theorem (Theorem~\ref{thm:comparison}) sandwiches every solution between them. The terminal values realize the indicator $\mathbf{1}_{B_T > 0}$ along each Brownian path; the initial values $Y_0$ are Monte Carlo estimates of $u(0, 0) \approx \tfrac12$.}
+\label{fig:fisher-kpp}
+\end{figure}
 
 \section{Applications}
 
@@ -413,9 +560,67 @@ The mathematical content is the \emph{variational characterization}: the functio
 
 In practice, Deep BSDE handles $n = 100$ on a laptop in minutes, well beyond the reach of finite differences. Reported accuracy is $10^{-3}$ to $10^{-4}$ relative error on benchmark problems (HJB, Black--Scholes with default risk, Allen--Cahn).
 
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  >={Stealth},
+  yk/.style={draw, fill=red!12, circle, minimum size=8mm, inner sep=0pt, font=\small},
+  nn/.style={draw, fill=blue!12, rounded corners, minimum height=7mm, minimum width=9mm, font=\small},
+  xk/.style={draw, fill=gray!12, rounded corners, minimum height=7mm, minimum width=9mm, font=\small},
+]
+% Y row
+\node[yk] (Y0) at (0,0) {$Y_0$};
+\node[nn] (NN0) at (1.6, 0) {$z^\theta_0$};
+\node[yk] (Y1) at (3.2, 0) {$Y_1$};
+\node[nn] (NN1) at (4.8, 0) {$z^\theta_1$};
+\node[yk] (Y2) at (6.4, 0) {$Y_2$};
+\node      (dots) at (7.7, 0) {$\cdots$};
+\node[nn] (NNM)  at (9.0, 0) {$z^\theta_{M-1}$};
+\node[yk] (YM)  at (10.6, 0) {$Y_M$};
+
+\node[below=1pt of Y0, font=\scriptsize] {$=\theta_0$};
+
+\draw[->] (Y0) -- (NN0);
+\draw[->] (NN0) -- (Y1);
+\draw[->] (Y1) -- (NN1);
+\draw[->] (NN1) -- (Y2);
+\draw[->] (Y2) -- (dots);
+\draw[->] (dots) -- (NNM);
+\draw[->] (NNM) -- (YM);
+
+% X row
+\node[xk] (X0) at (0,-1.8) {$X_0=x_0$};
+\node[xk] (X1) at (3.2,-1.8) {$X_1$};
+\node[xk] (X2) at (6.4,-1.8) {$X_2$};
+\node     (Xd) at (7.7,-1.8) {$\cdots$};
+\node[xk] (XM) at (10.6,-1.8) {$X_M$};
+
+\draw[->, gray!70!black] (X0) -- node[font=\scriptsize, above]{$\Delta B_0$} (X1);
+\draw[->, gray!70!black] (X1) -- node[font=\scriptsize, above]{$\Delta B_1$} (X2);
+\draw[->, gray!70!black] (X2) -- (Xd);
+\draw[->, gray!70!black] (Xd) -- (XM);
+
+% Feed-in dashed arrows from X to NN
+\draw[->, dashed, gray!70] (X0) -- (NN0);
+\draw[->, dashed, gray!70] (X1) -- (NN1);
+\draw[->, dashed, gray!70] (X2) -- (NNM);
+
+% Loss
+\node[draw, dashed, rounded corners, minimum width=4.0cm, minimum height=8mm, font=\small] (loss) at (8.0,-3.4) {$\mathcal{J}(\theta)=\E\big|g(X_M)-Y_M\big|^2$};
+\draw[->] (XM) -- (loss.east);
+\draw[->] (YM.south) to[bend left=18] (loss.north east);
+
+% Legend
+\node[font=\scriptsize, anchor=west] at (-0.7, 1.5) {trainable: $\theta_0\in\R$ (initial value), $\theta_{\rm net}$ (per-step nets)};
+\node[font=\scriptsize, anchor=west] at (-0.7, -3.4) {input only: $\Delta B_k\sim\mathcal{N}(0,\Delta t)$};
+\end{tikzpicture}
+\caption{Architecture of the Deep BSDE method. The forward chain (gray) is the Euler--Maruyama discretization of $X$ driven by sampled Brownian increments $\Delta B_k$. The backward chain (red/blue) propagates $Y^\theta$ \emph{forward in time} from a trainable scalar $\theta_0$ using $Y^\theta_{k+1} = Y^\theta_k - f(t_k, X_k, Y^\theta_k, z^\theta_k)\Delta t + z^\theta_k \cdot \Delta B_k$, where each $z^\theta_k$ is a small neural network mapping $X_k \mapsto \sigma^\top(t_k, X_k)\nabla u(t_k, X_k)$. Training by SGD on the terminal mismatch loss $\mathcal{J}(\theta)$ drives $\theta_0 \to u(0, x_0)$. The variational characterization that makes this work is, in essence, the uniqueness half of Theorem~\ref{thm:pp}.}
+\label{fig:deepbsde}
+\end{figure}
+
 \section{Outlook}
 
-We close with three threads that the next article in this series could follow.
+We close with four threads that the next article in this series could follow.
 
 \paragraph{Forward--backward coupling (FBSDEs).} If the forward coefficients depend on $Y$ or $Z$, we obtain a \emph{coupled} forward--backward SDE:
 \begin{align*}
@@ -425,6 +630,16 @@ We close with three threads that the next article in this series could follow.
 This is the natural language of fully coupled stochastic optimal control via Pontryagin's maximum principle. Existence requires either a monotonicity condition (Ma--Yong), a small-time hypothesis (Antonelli), or the four-step scheme (Ma--Protter--Yong) when the PDE side has a classical solution.
 
 \paragraph{Mean-field BSDEs.} Letting the driver depend on the marginal law $\mathcal{L}(Y_s)$ leads to McKean--Vlasov BSDEs, the natural language of mean-field games. The corresponding PDE lives on $[0, T] \times \R^n \times \mathcal{P}_2(\R^n)$ --- the so-called master equation --- and links back to the Wasserstein calculus of Lions.
+
+\paragraph{Reflected BSDEs and American options.} A reflected BSDE (El~Karoui--Kapoudjian--Pardoux--Peng--Quenez 1997) adds an obstacle process $L = (L_t)$ to the equation: a solution is a triple $(Y, Z, K)$ where $K$ is a continuous nondecreasing process with $K_0 = 0$, $Y_t \ge L_t$ a.s., and
+\[
+  Y_t = \xi + \int_t^T f(s, Y_s, Z_s)\,ds + K_T - K_t - \int_t^T Z_s\, dB_s,
+\]
+together with the Skorokhod condition $\int_0^T (Y_t - L_t)\,dK_t = 0$. The process $K$ pushes $Y$ upward minimally, only when $Y$ touches the obstacle. The associated PDE is the obstacle problem
+\[
+  \min\!\big\{ -\partial_t u - \Lc u - f(t, x, u, \sigma^{\top}\nabla u),\ u - L \big\} = 0, \qquad u(T, x) = g(x),
+\]
+and the BSDE representation gives $Y_t = \mathrm{esssup}_{\tau \in [t, T]} \E[\int_t^\tau f\, ds + L_\tau \mathbf{1}_{\tau < T} + \xi \mathbf{1}_{\tau = T} \mid \F_t]$, i.e.\ the value of an optimal stopping problem with running cost $f$. The textbook application is American-option pricing: $L_t = (K - X_t)^+$ for a put with strike $K$, $f \equiv -r y$ for discounting; the early-exercise boundary is the contact set $\{Y = L\}$. Double-obstacle (Dynkin game) and second-order variants follow the same template.
 
 \paragraph{Rough paths and rough BSDEs.} If the driving noise is rougher than Brownian motion (e.g.\ fractional Brownian motion with Hurst parameter $H < 1/2$), the It\^o calculus underlying BSDEs breaks down. Lyons' rough path theory and Hairer's regularity structures supply the replacement; rough BSDEs are an active area, with the Diehl--Friz--Gassiat formulation as the standard reference.
 
