@@ -30,3 +30,9 @@ Thumbs.db
 __pycache__/
 *.pyc
 .venv/
+
+# Overleaf sync — keep session cookies and backups local only
+.olauth
+.olauth.*
+.olignore
+.overleaf-backup-*.zip
